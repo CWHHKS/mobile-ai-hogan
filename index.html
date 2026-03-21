@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<meta name="theme-color" content="#0a2e1a"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="AI Hogan"/>
+<meta name="description" content="벤 호건 레슨 기반 AI 골프 스윙 분석 앱"/>
+<title>AI Hogan – 벤 호건 스윙 분석</title>
+<link rel="manifest" href="manifest.json"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<script>
+// skipLoader는 CDN 로드 전에 즉시 정의
+function skipLoader(){
+  document.getElementById('loader').style.display='none';
+  window._aiSkipped=true;
+  var d=document.getElementById('statusDot'), t=document.getElementById('statusText');
+  if(d){d.className='dot err';} if(t){t.textContent='AI 미사용';}
+  var toast=document.getElementById('toast');
+  if(toast){toast.textContent='⚠️ AI 없이 실행 — 영상 분석 불가';toast.classList.add('show');setTimeout(function(){toast.classList.remove('show');},3000);}
+}
+</script>
+<script src="lib/tf-core.min.js"></script>
+<script src="lib/tf-converter.min.js"></script>
+<script src="lib/tf-backend-webgl.min.js"></script>
+<script src="lib/pose-detection.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --g:#0a2e1a;--ga:#22c55e;--gg:rgba(34,197,94,.2);--gold:#f59e0b;--gl:#fcd34d;
+  --bg:rgba(255,255,255,.05);--bd:rgba(255,255,255,.1);--tp:#f0fdf4;--ts:#86efac;
+  --nav-h:64px;--tab-h:68px;
+}
+html,body{height:100%;overflow:hidden;background:var(--g);color:var(--tp);font-family:'Inter',sans-serif}
+/* ── APP SHELL ── */
+#app{display:flex;flex-direction:column;height:100%;height:100dvh}
+/* TOP NAV */
+.topbar{
+  height:var(--nav-h);display:flex;align-items:center;justify-content:space-between;
+  padding:0 1.2rem;background:rgba(10,46,26,.9);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--bd);flex-shrink:0;
+  padding-top:env(safe-area-inset-top);
+}
+.logo{display:flex;align-items:center;gap:.5rem;font-weight:800;font-size:1.15rem}
+.logo-ic{width:32px;height:32px;background:linear-gradient(135deg,var(--ga),var(--gold));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.logo span{color:var(--ga)}
+.status-pill{
+  display:flex;align-items:center;gap:.4rem;
+  background:rgba(0,0,0,.3);border:1px solid var(--bd);
+  padding:.3rem .7rem;border-radius:100px;font-size:.72rem;color:var(--ts);
+}
+.dot{width:7px;height:7px;border-radius:50%;background:#6b7280;flex-shrink:0}
+.dot.loading{background:var(--gold);animation:p 1s infinite}
+.dot.ready{background:var(--ga)}
+.dot.live{background:var(--ga);animation:p .5s infinite}
+.dot.err{background:#f87171}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.2}}
+/* PAGES */
+.pages{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:none;padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom))}
+.page.active{display:block}
+/* ── PAGE: CAMERA ── */
+.camera-page{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+.cam-wrapper{position:relative;width:100%;aspect-ratio:9/16;max-height:calc(100dvh - var(--nav-h) - var(--tab-h) - 120px);background:#000;overflow:hidden}
+#camFeed,#camCanvas{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
+#camCanvas{pointer-events:none}
+.cam-overlay-ui{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  justify-content:space-between;padding:1rem;pointer-events:none;
+}
+.cam-top-row{display:flex;justify-content:space-between;align-items:flex-start}
+.cam-badge{
+  background:rgba(0,0,0,.55);backdrop-filter:blur(8px);
+  border:1px solid rgba(34,197,94,.4);border-radius:8px;
+  padding:.4rem .8rem;font-size:.75rem;font-weight:700;color:var(--ga);
+}
+.cam-phase{
+  background:rgba(0,0,0,.55);backdrop-filter:blur(8px);
+  border-radius:8px;padding:.4rem .8rem;font-size:.78rem;font-weight:700;color:var(--tp);
+}
+.cam-angles{display:flex;gap:.5rem;flex-wrap:wrap}
+.cam-angle-chip{
+  background:rgba(0,0,0,.6);backdrop-filter:blur(8px);border-radius:8px;
+  padding:.3rem .6rem;font-size:.7rem;font-weight:600;
+}
+.cam-angle-chip span{color:var(--ga);font-size:.8rem;font-weight:800}
+.cam-controls{
+  padding:.8rem 1.2rem;background:rgba(10,46,26,.85);backdrop-filter:blur(20px);
+  border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:space-around;
+  flex-shrink:0;
+}
+.cam-btn{
+  width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:1.4rem;
+  transition:transform .15s,opacity .15s;
+}
+.cam-btn:active{transform:scale(.9);opacity:.7}
+.cam-btn-main{
+  width:72px;height:72px;
+  background:linear-gradient(135deg,var(--ga),#16a34a);
+  box-shadow:0 0 30px var(--gg);color:#000;font-size:1.6rem;
+}
+.cam-btn-main.recording{background:linear-gradient(135deg,#ef4444,#b91c1c);box-shadow:0 0 30px rgba(239,68,68,.4)}
+.cam-btn-sec{background:rgba(255,255,255,.1);color:var(--tp)}
+.cam-btn-sec:disabled{opacity:.3}
+/* ── PAGE: UPLOAD ── */
+.upload-page{padding:1.2rem}
+.upload-zone{
+  border:2px dashed rgba(34,197,94,.4);border-radius:18px;
+  padding:2.5rem 1.5rem;text-align:center;
+  background:var(--bg);cursor:pointer;transition:all .3s;margin-bottom:1rem;
+}
+.upload-zone:active{border-color:var(--ga);background:rgba(34,197,94,.08)}
+.upload-icon{font-size:2.5rem;margin-bottom:.6rem;display:block;animation:fl 3s ease-in-out infinite}
+@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.upload-zone h3{font-size:1rem;font-weight:700;margin-bottom:.3rem}
+.upload-zone p{color:var(--ts);font-size:.83rem;margin-bottom:.8rem}
+.ftags{display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap}
+.ftag{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:var(--ga);font-size:.7rem;font-weight:600;padding:.15rem .5rem;border-radius:5px}
+#file-input{display:none}
+/* Video player area */
+#video-analysis-area{display:none}
+.vw{position:relative;border-radius:14px;overflow:hidden;background:#000;margin-bottom:.8rem;aspect-ratio:16/9}
+#videoEl{width:100%;height:100%;object-fit:contain;display:block}
+#vidCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.vcontrols{display:flex;gap:.6rem;align-items:center;margin-bottom:.8rem}
+.btn{padding:.6rem 1rem;border-radius:10px;border:none;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:.35rem}
+.btn:active{transform:scale(.97)}
+.btn-g{background:var(--ga);color:#000;flex:1}
+.btn-o{background:var(--bg);color:var(--tp);border:1px solid var(--bd);flex:1}
+.btn-sm{padding:.5rem .8rem;font-size:.8rem}
+.btn:disabled{opacity:.3;pointer-events:none}
+.txt-btn{background:none;border:none;color:var(--ts);font-size:.8rem;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:underline;padding:.3rem 0}
+.txt-btn:active{color:var(--tp)}
+/* ── PAGE: RESULTS ── */
+.results-page{padding:1.2rem;display:flex;flex-direction:column;gap:.9rem}
+.pc{background:var(--bg);border:1px solid var(--bd);border-radius:16px;padding:1.1rem}
+.pc h4{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ts);margin-bottom:.8rem;display:flex;align-items:center;gap:.4rem}
+/* Score ring */
+.score-center{display:flex;align-items:center;gap:1.2rem}
+.ring{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:conic-gradient(var(--ga) 0%,rgba(255,255,255,.07) 0%);transition:background .5s}
+.ring-in{width:60px;height:60px;border-radius:50%;background:var(--g);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.rnum{font-size:1.35rem;font-weight:800;color:var(--ga);line-height:1}
+.rlbl{font-size:.55rem;color:var(--ts);margin-top:1px}
+.score-info{flex:1}
+.phase-b{display:inline-flex;align-items:center;gap:.4rem;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:var(--ga);padding:.35rem .7rem;border-radius:7px;font-weight:700;font-size:.82rem;margin-bottom:.6rem}
+.score-sub{font-size:.78rem;color:var(--ts);line-height:1.5}
+/* Angle grid */
+.ag{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.ai{background:rgba(0,0,0,.25);border-radius:10px;padding:.65rem;border:1px solid var(--bd)}
+.ai .al{font-size:.65rem;color:var(--ts);font-weight:500;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:.2rem}
+.ai .av{font-size:1.2rem;font-weight:800;color:var(--ga);letter-spacing:-.5px}
+.ai .av.warn{color:var(--gold)}.ai .av.bad{color:#f87171}
+/* Score bars */
+.sr{display:flex;align-items:center;gap:.6rem;margin-bottom:.55rem}
+.sr:last-child{margin-bottom:0}
+.sl{font-size:.75rem;color:var(--ts);width:64px;flex-shrink:0}
+.sb{flex:1;height:7px;background:rgba(255,255,255,.07);border-radius:100px;overflow:hidden}
+.sf{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--ga),var(--gl));transition:width .5s ease}
+.sn{font-size:.78rem;font-weight:700;width:26px;text-align:right;color:var(--tp)}
+/* Feedback */
+.fl{list-style:none;display:flex;flex-direction:column;gap:.5rem}
+.fi{display:flex;align-items:flex-start;gap:.5rem;font-size:.8rem;line-height:1.5;color:var(--ts)}
+.fi-i{font-size:.9rem;flex-shrink:0;margin-top:1px}
+/* ── PAGE: HOME ── */
+.home-page{padding:1.2rem}
+.home-hero{
+  background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(245,158,11,.08));
+  border:1px solid rgba(34,197,94,.25);border-radius:20px;
+  padding:1.8rem 1.4rem;text-align:center;margin-bottom:1rem;
+}
+.home-hero .badge{display:inline-block;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:var(--ga);font-size:.7rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:.3rem .8rem;border-radius:100px;margin-bottom:.8rem}
+.home-hero h1{font-size:1.6rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.5rem;line-height:1.2}
+.home-hero h1 .hl{background:linear-gradient(90deg,var(--ga),var(--gl));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.home-hero p{font-size:.83rem;color:var(--ts);line-height:1.6;margin-bottom:1.2rem}
+.home-actions{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap}
+.hbtn{padding:.65rem 1.2rem;border-radius:11px;font-family:'Inter',sans-serif;font-weight:700;font-size:.88rem;border:none;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:.4rem}
+.hbtn:active{transform:scale(.96)}
+.hbtn-g{background:var(--ga);color:#000;box-shadow:0 0 20px var(--gg)}
+.hbtn-o{background:var(--bg);color:var(--tp);border:1px solid var(--bd)}
+.quick-cards{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1rem}
+.qc{background:var(--bg);border:1px solid var(--bd);border-radius:14px;padding:1rem;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.qc:active{transform:scale(.97);background:rgba(34,197,94,.08)}
+.qc .qe{font-size:1.6rem;margin-bottom:.4rem;display:block}
+.qc h3{font-size:.88rem;font-weight:700;margin-bottom:.25rem}
+.qc p{font-size:.73rem;color:var(--ts);line-height:1.5}
+.info-card{background:var(--bg);border:1px solid var(--bd);border-radius:14px;padding:1rem}
+.info-card h4{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ts);margin-bottom:.7rem}
+.tech-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;font-size:.8rem;color:var(--ts)}
+.tech-row:last-child{margin-bottom:0}
+.tbadge{background:rgba(34,197,94,.1);color:var(--ga);font-size:.68rem;font-weight:700;padding:.15rem .5rem;border-radius:5px;flex-shrink:0}
+/* ── BOTTOM TAB ── */
+.tabbar{
+  height:var(--tab-h);display:flex;align-items:flex-start;justify-content:space-around;
+  background:rgba(10,46,26,.92);backdrop-filter:blur(20px);border-top:1px solid var(--bd);
+  flex-shrink:0;padding-top:.6rem;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.tab{
+  display:flex;flex-direction:column;align-items:center;gap:.15rem;
+  min-width:56px;cursor:pointer;border:none;background:none;
+  color:rgba(134,239,172,.4);transition:color .2s;padding:.4rem .6rem;border-radius:10px;
+}
+.tab.active{color:var(--ga)}
+.tab-icon{font-size:1.35rem;line-height:1}
+.tab-label{font-size:.62rem;font-weight:600;font-family:'Inter',sans-serif}
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:calc(var(--tab-h) + 1rem + env(safe-area-inset-bottom));
+  left:50%;transform:translateX(-50%) translateY(20px);
+  background:rgba(10,46,26,.95);border:1px solid var(--ga);
+  color:var(--ga);font-weight:700;padding:.7rem 1.2rem;border-radius:100px;
+  font-size:.82rem;opacity:0;transition:all .3s cubic-bezier(.16,1,.3,1);z-index:999;
+  white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ── LOADING OVERLAY ── */
+.loader{
+  position:fixed;inset:0;background:rgba(10,46,26,.9);backdrop-filter:blur(10px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:500;gap:1rem;transition:opacity .3s;
+}
+.loader.hidden{display:none!important;opacity:0;pointer-events:none}
+.spinner{
+  width:48px;height:48px;border:3px solid rgba(34,197,94,.2);
+  border-top-color:var(--ga);border-radius:50%;animation:spin 1s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader p{color:var(--ts);font-size:.9rem;text-align:center;max-width:200px;line-height:1.5}
+.loader strong{color:var(--ga)}
+/* ── HOGAN LESSON PAGE ── */
+.hogan-page{padding:1.2rem;display:flex;flex-direction:column;gap:.9rem}
+.hogan-header{background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(34,197,94,.08));border:1px solid rgba(245,158,11,.3);border-radius:18px;padding:1.4rem;text-align:center}
+.hogan-header .h-badge{display:inline-block;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:var(--gold);font-size:.7rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:.3rem .8rem;border-radius:100px;margin-bottom:.7rem}
+.hogan-header h2{font-size:1.3rem;font-weight:800;margin-bottom:.4rem;color:var(--tp)}
+.hogan-header p{font-size:.8rem;color:var(--ts);line-height:1.6}
+.lesson-card{background:var(--bg);border:1px solid var(--bd);border-radius:16px;padding:1.1rem;cursor:pointer;transition:all .2s}
+.lesson-card:active{background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.4)}
+.lesson-card-top{display:flex;align-items:center;gap:.8rem;margin-bottom:.6rem}
+.lesson-num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#e07b00);color:#000;font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lesson-title{font-size:.95rem;font-weight:700;color:var(--tp)}
+.lesson-sub{font-size:.75rem;color:var(--gold);font-weight:600}
+.lesson-body{font-size:.8rem;color:var(--ts);line-height:1.6;display:none}
+.lesson-body.open{display:block}
+.lesson-tip{background:rgba(245,158,11,.08);border-left:3px solid var(--gold);padding:.6rem .8rem;border-radius:0 8px 8px 0;margin-top:.7rem;font-size:.78rem;color:var(--gl);line-height:1.5}
+/* ── HOGAN Q&A CHAT ── */
+.chat-wrap{display:flex;flex-direction:column;gap:.6rem}
+.chat-msgs{height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:.5rem;padding:.5rem;background:rgba(0,0,0,.2);border-radius:10px;border:1px solid var(--bd)}
+.chat-msg{max-width:88%;padding:.55rem .8rem;border-radius:12px;font-size:.8rem;line-height:1.5}
+.chat-msg.bot{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);color:var(--tp);align-self:flex-start;border-radius:4px 12px 12px 12px}
+.chat-msg.user{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);color:var(--tp);align-self:flex-end;border-radius:12px 4px 12px 12px}
+.chat-input-row{display:flex;gap:.5rem}
+.chat-input{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--bd);border-radius:10px;padding:.55rem .8rem;color:var(--tp);font-family:'Inter',sans-serif;font-size:.85rem;outline:none}
+.chat-input:focus{border-color:var(--gold)}
+.chat-send{background:var(--gold);color:#000;border:none;border-radius:10px;padding:.55rem .9rem;font-weight:700;font-size:.85rem;cursor:pointer;white-space:nowrap}
+.chat-send:active{opacity:.8}
+.chat-hints{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.3rem}
+.hint-chip{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--gold);font-size:.7rem;font-weight:600;padding:.2rem .6rem;border-radius:20px;cursor:pointer}
+.hint-chip:active{background:rgba(245,158,11,.2)}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="logo"><div class="logo-ic">🏆</div>AI<span>Hogan</span></div>
+    <div class="status-pill">
+      <div class="dot loading" id="statusDot"></div>
+      <span id="statusText">모델 로딩</span>
+    </div>
+  </div>
+
+  <!-- PAGES -->
+  <div class="pages">
+    <!-- HOME -->
+    <div class="page active" id="page-home">
+      <div class="home-page">
+        <div class="home-hero">
+          <span class="badge">🏆 벤 호건 5원칙 × AI 분석</span>
+          <h1>벤 호건처럼<br/><span class="hl">스윙을 완성</span></h1>
+          <p>골프 역사상 최고의 기술파 호건의 5가지 원칙으로<br/>AI가 당신의 스윙을 실시간 코칭합니다.</p>
+          <div class="home-actions">
+            <button class="hbtn hbtn-g" onclick="goCamera()">📷 카메라 분석</button>
+            <button class="hbtn hbtn-o" onclick="showTab('hogan')">📖 호건 레슨</button>
+          </div>
+        </div>
+        <div class="quick-cards">
+          <div class="qc" onclick="goCamera()">
+            <span class="qe">📷</span>
+            <h3>실시간 카메라</h3>
+            <p>스마트폰으로 바로 스윙 분석</p>
+          </div>
+          <div class="qc" onclick="goUpload()">
+            <span class="qe">🎬</span>
+            <h3>영상 분석</h3>
+            <p>촬영된 영상을 업로드해 분석</p>
+          </div>
+          <div class="qc" onclick="showTab('results')">
+            <span class="qe">📊</span>
+            <h3>분석 결과</h3>
+            <p>실시간 각도 및 자세 점수</p>
+          </div>
+          <div class="qc" onclick="showTab('hogan')">
+            <span class="qe">🏆</span>
+            <h3>호건 레슨</h3>
+            <p>5가지 필수 원칙 학습</p>
+          </div>
+        </div>
+        <div class="info-card">
+          <h4>⚡ 기술 스택</h4>
+          <div class="tech-row"><span class="tbadge">AI</span>MoveNet Lightning (Google)</div>
+          <div class="tech-row"><span class="tbadge">GPU</span>TensorFlow.js WebGL 가속</div>
+          <div class="tech-row"><span class="tbadge">🔒</span>완전 로컬 처리 — 영상 외부 전송 없음</div>
+          <div class="tech-row"><span class="tbadge">PWA</span>홈 화면에 추가 가능</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CAMERA -->
+    <div class="page" id="page-camera">
+      <div class="camera-page">
+        <div class="cam-wrapper">
+          <video id="camFeed" autoplay playsinline muted></video>
+          <canvas id="camCanvas"></canvas>
+          <div class="cam-overlay-ui">
+            <div class="cam-top-row">
+              <div class="cam-badge" id="camBadge">⏸ 대기 중</div>
+              <div class="cam-phase" id="camPhase">--</div>
+            </div>
+            <div class="cam-angles" id="camAngles">
+              <div class="cam-angle-chip">척추 <span id="ca-spine">--</span>°</div>
+              <div class="cam-angle-chip">어깨 <span id="ca-sh">--</span>°</div>
+              <div class="cam-angle-chip">힙 <span id="ca-hip">--</span>°</div>
+              <div class="cam-angle-chip">무릎 <span id="ca-knee">--</span>°</div>
+            </div>
+          </div>
+        </div>
+        <div class="cam-controls">
+          <button class="cam-btn cam-btn-sec" id="flipBtn" onclick="flipCamera()" title="카메라 전환">🔄</button>
+          <button class="cam-btn cam-btn-main" id="liveBtn" onclick="toggleLive()">▶</button>
+          <button class="cam-btn cam-btn-sec" onclick="showTab('results')" title="결과 보기">📊</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="page" id="page-upload">
+      <div class="upload-page">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+          <span class="upload-icon">📹</span>
+          <h3>스윙 영상 업로드</h3>
+          <p>탭하여 영상 파일 선택</p>
+          <div class="ftags">
+            <span class="ftag">MP4</span><span class="ftag">MOV</span><span class="ftag">AVI</span><span class="ftag">WEBM</span>
+          </div>
+          <input type="file" id="file-input" accept="video/*"/>
+        </div>
+        <div id="video-analysis-area">
+          <div class="vw"><video id="videoEl" controls playsinline></video><canvas id="vidCanvas"></canvas></div>
+          <div class="vcontrols">
+            <button class="btn btn-g btn-sm" id="analyzeBtn" onclick="startVideoAnalysis()" disabled>🤖 분석 시작</button>
+            <button class="btn btn-o btn-sm" id="stopVidBtn" onclick="stopVideoAnalysis()" disabled>⏹ 중지</button>
+          </div>
+          <button class="txt-btn" onclick="resetUpload()">📂 다른 영상 선택</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="page" id="page-results">
+      <div class="results-page">
+        <div class="pc">
+          <h4>⭐ 종합 점수</h4>
+          <div class="score-center">
+            <div class="ring" id="scoreRing">
+              <div class="ring-in"><span class="rnum" id="overallScore">--</span><span class="rlbl">/ 100</span></div>
+            </div>
+            <div class="score-info">
+              <div class="phase-b" id="swingPhase">📍 대기 중</div>
+              <div class="score-sub" id="scoreSubtext">분석을 시작하면<br/>실시간으로 업데이트됩니다</div>
+            </div>
+          </div>
+        </div>
+        <div class="pc">
+          <h4>📐 실시간 각도 (기본)</h4>
+          <div class="ag">
+            <div class="ai"><span class="al">척추 기울기</span><span class="av" id="spineVal">--</span></div>
+            <div class="ai"><span class="al">어깨 회전</span><span class="av" id="shoulderVal">--</span></div>
+            <div class="ai"><span class="al">힙 회전</span><span class="av" id="hipVal">--</span></div>
+            <div class="ai"><span class="al">왼쪽 무릎</span><span class="av" id="kneeVal">--</span></div>
+            <div class="ai"><span class="al">오른쪽 팔꿈치</span><span class="av" id="elbowVal">--</span></div>
+            <div class="ai"><span class="al">감지 관절</span><span class="av" id="kpCount">--</span></div>
+          </div>
+        </div>
+        <div class="pc">
+          <h4>📐 확장 각도 분석</h4>
+          <div class="ag">
+            <div class="ai"><span class="al">오른쪽 무릎</span><span class="av" id="rkneeVal">--</span></div>
+            <div class="ai"><span class="al">왼쪽 팔꿈치</span><span class="av" id="lelbowVal">--</span></div>
+            <div class="ai"><span class="al">무릎 좌우 차이</span><span class="av" id="kneeSymVal">--</span></div>
+            <div class="ai"><span class="al">목 기울기</span><span class="av" id="neckTiltVal">--</span></div>
+            <div class="ai"><span class="al">머리 위치</span><span class="av" id="headPosVal">--</span></div>
+          </div>
+        </div>
+        <div class="pc">
+          <h4>🦵 신체·자세 측정</h4>
+          <div class="ag">
+            <div class="ai"><span class="al">발 너비 (스탠스)</span><span class="av" id="footWidthVal">--</span></div>
+            <div class="ai"><span class="al">무게 중심</span><span class="av" id="weightCenterVal">--</span></div>
+            <div class="ai"><span class="al">손목 속도</span><span class="av" id="wristVelVal">--</span></div>
+          </div>
+        </div>
+        <div class="pc">
+          <h4>🎵 리듬 &amp; 템포</h4>
+          <div class="ag">
+            <div class="ai"><span class="al">템포 비율</span><span class="av" id="tempoVal">--</span></div>
+            <div class="ai"><span class="al">백스윙 시간</span><span class="av" id="bsTimeVal">--</span></div>
+            <div class="ai"><span class="al">다운스윙 시간</span><span class="av" id="dsTimeVal">--</span></div>
+          </div>
+          <p style="font-size:.72rem;color:var(--ts);opacity:.7;margin-top:.5rem;line-height:1.4">스윙을 완성할 때 자동 측정됩니다.<br/>이상적 템포: 백스윙:다운스윙 = 3:1</p>
+        </div>
+        <div class="pc">
+          <h4>📊 자세 점수</h4>
+          <div class="sr"><span class="sl">척추</span><div class="sb"><div class="sf" id="barSpine" style="width:0%"></div></div><span class="sn" id="numSpine">0</span></div>
+          <div class="sr"><span class="sl">X-Factor</span><div class="sb"><div class="sf" id="barX" style="width:0%"></div></div><span class="sn" id="numX">0</span></div>
+          <div class="sr"><span class="sl">무릎 안정</span><div class="sb"><div class="sf" id="barKnee" style="width:0%"></div></div><span class="sn" id="numKnee">0</span></div>
+          <div class="sr"><span class="sl">팔 신전</span><div class="sb"><div class="sf" id="barElbow" style="width:0%"></div></div><span class="sn" id="numElbow">0</span></div>
+          <div class="sr"><span class="sl">무릎 대칭</span><div class="sb"><div class="sf" id="barKneeSym" style="width:0%"></div></div><span class="sn" id="numKneeSym">0</span></div>
+          <div class="sr"><span class="sl">목 자세</span><div class="sb"><div class="sf" id="barNeck" style="width:0%"></div></div><span class="sn" id="numNeck">0</span></div>
+        </div>
+        <div class="pc">
+          <h4>💡 AI 피드백</h4>
+          <ul class="fl" id="feedbackList">
+            <li class="fi"><span class="fi-i">⏳</span><span>카메라 또는 영상 분석을 시작하세요</span></li>
+          </ul>
+        </div>
+        <div class="pc">
+          <h4>🏆 호건 AI 코치에게 질문</h4>
+          <div class="chat-wrap">
+            <div class="chat-msgs" id="chatMsgs">
+              <div class="chat-msg bot">안녕하세요! 벤 호건의 스윙 원칙을 기반으로 코칭해 드립니다. 궁금한 점을 질문해 보세요. 현재 분석 데이터를 참고해 답변드립니다. 🏆</div>
+            </div>
+            <div class="chat-hints">
+              <span class="hint-chip" onclick="sendHint('그립 알려줘')">그립</span>
+              <span class="hint-chip" onclick="sendHint('척추 기울기')">척추</span>
+              <span class="hint-chip" onclick="sendHint('백스윙 어떻게')">백스윙</span>
+              <span class="hint-chip" onclick="sendHint('다운스윙 힙')">다운스윙</span>
+              <span class="hint-chip" onclick="sendHint('임팩트 자세')">임팩트</span>
+              <span class="hint-chip" onclick="sendHint('내 점수 분석')">내 점수</span>
+            </div>
+            <div class="chat-input-row">
+              <input class="chat-input" id="chatInput" type="text" placeholder="호건 선생님께 질문..." onkeydown="if(event.key==='Enter')sendChat()"/>
+              <button class="chat-send" onclick="sendChat()">전송</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOGAN LESSON -->
+    <div class="page" id="page-hogan">
+      <div class="hogan-page">
+        <div class="hogan-header">
+          <div class="h-badge">⛳ 골프 레전드 벤 호건</div>
+          <h2>5가지 필수 원칙</h2>
+          <p>"골프는 연습으로 완성되지 않는다.<br/>올바른 연습으로만 완성된다." — 벤 호건</p>
+        </div>
+        <div class="lesson-card" onclick="toggleLesson(this)">
+          <div class="lesson-card-top"><div class="lesson-num">1</div><div><div class="lesson-title">그립 (The Grip)</div><div class="lesson-sub">가장 중요한 첫 번째 원칙</div></div></div>
+          <div class="lesson-body">호건은 그립을 골프의 가장 근본적인 요소로 봤습니다. <strong>배돈(Vardon) 그립</strong>을 권장했으며, 왼손은 페이드를 위해 약간 열리게, 손가락 패드로 클럽을 잡아야 한다고 강조했습니다.<div class="lesson-tip">💡 호건 팁: 왼손 엄지와 검지로 만든 V자가 오른쪽 어깨를 향하도록 하라.</div></div>
+        </div>
+        <div class="lesson-card" onclick="toggleLesson(this)">
+          <div class="lesson-card-top"><div class="lesson-num">2</div><div><div class="lesson-title">스탠스 & 정렬</div><div class="lesson-sub">발, 엉덩이, 어깨 모두 타겟 라인과 평행</div></div></div>
+          <div class="lesson-body">호건은 <strong>오픈 스탠스</strong>를 선호했습니다. 왼발을 약 30° 열어 체중 이동과 힙 클리어런스를 용이하게 했습니다. 발 너비는 드라이버 기준 어깨 약 1.2배.<div class="lesson-tip">💡 호건 팁: 양 무릎을 안쪽으로 살짝 굽혀 스프링처럼 준비하라.</div></div>
+        </div>
+        <div class="lesson-card" onclick="toggleLesson(this)">
+          <div class="lesson-card-top"><div class="lesson-num">3</div><div><div class="lesson-title">척추 기울기 & 어깨 회전</div><div class="lesson-sub">X-Factor의 핵심</div></div></div>
+          <div class="lesson-body">백스윙 탑에서 어깨는 <strong>90° 회전</strong>하고 힙은 45° 이하로 제한해 최대 코일(X-Factor)을 만듭니다. 척추는 어드레스 때 5-10° 전경을 유지해야 합니다.<div class="lesson-tip">💡 이 앱 기준: 척추 5-10°, X-Factor 40-55°가 목표입니다.</div></div>
+        </div>
+        <div class="lesson-card" onclick="toggleLesson(this)">
+          <div class="lesson-card-top"><div class="lesson-num">4</div><div><div class="lesson-title">다운스윙 & 힙 클리어런스</div><div class="lesson-sub">힙이 먼저, 팔은 나중에</div></div></div>
+          <div class="lesson-body">호건 스윙의 비밀: 다운스윙은 <strong>왼쪽 힙이 타겟 방향으로 슬라이드</strong>하며 시작합니다. 절대 손이나 팔이 먼저 내려오면 안 됩니다(캐스팅 금지). 이것이 파워와 방향성의 원천입니다.<div class="lesson-tip">💡 호건 팁: 다운스윙 시 왼쪽 무릎이 타겟을 향해 먼저 움직여라.</div></div>
+        </div>
+        <div class="lesson-card" onclick="toggleLesson(this)">
+          <div class="lesson-card-top"><div class="lesson-num">5</div><div><div class="lesson-title">임팩트 & 팔로우스루</div><div class="lesson-sub">완전한 익스텐션과 피니시</div></div></div>
+          <div class="lesson-body">임팩트 시 왼팔은 완전히 펴지고(elbow 160°+), 힙은 완전히 열려야 합니다. 팔로우스루에서 <strong>오른 어깨가 낮게 타겟을 향해 회전</strong>하며 무게는 왼발 95% 이상 이동합니다.<div class="lesson-tip">💡 호건 팁: 피니시는 상상 속 이상적인 자세의 반영이다. 아름다운 피니시를 목표로 하라.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM TAB BAR -->
+  <div class="tabbar">
+    <button class="tab active" id="tab-home" onclick="showTab('home')">
+      <span class="tab-icon">🏠</span><span class="tab-label">홈</span>
+    </button>
+    <button class="tab" id="tab-camera" onclick="showTab('camera')">
+      <span class="tab-icon">📷</span><span class="tab-label">카메라</span>
+    </button>
+    <button class="tab" id="tab-upload" onclick="showTab('upload')">
+      <span class="tab-icon">📂</span><span class="tab-label">업로드</span>
+    </button>
+    <button class="tab" id="tab-results" onclick="showTab('results')">
+      <span class="tab-icon">📊</span><span class="tab-label">결과</span>
+    </button>
+    <button class="tab" id="tab-hogan" onclick="showTab('hogan')">
+      <span class="tab-icon">🏆</span><span class="tab-label">호건</span>
+    </button>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div class="loader" id="loader">
+  <div class="spinner"></div>
+  <p id="loaderMsg">AI 모델 로딩 중...<br/><strong>MoveNet Lightning</strong><br/>잠시만 기다려주세요</p>
+  <button onclick="skipLoader()" style="margin-top:.5rem;background:none;border:1px solid rgba(134,239,172,.3);color:var(--ts);padding:.5rem 1.2rem;border-radius:8px;font-family:Inter,sans-serif;font-size:.8rem;cursor:pointer">건너뛰기 (AI 없이 실행)</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const SKEL=[[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
+let detector=null, liveRunning=false, videoRunning=false, rafId=null;
+let camStream=null, facingMode='environment';
+let sh={spine:[],xf:[],knee:[],elbow:[],rknee:[],lelbow:[],head:[],footW:[],wCenter:[],kneeSym:[],neckTilt:[]};
+const HL=20;
+// Tempo tracking
+let tempoData={tracking:false,bsStart:0,peakY:Infinity,peakT:0,bsMs:0,dsMs:0,tempoRatio:0};
+let prevWristY=null, wristVelocities=[];
+
+// ── INIT ──
+async function init(){
+  if(window._aiSkipped) return;
+  try{
+    $('loaderMsg').innerHTML='WebGL 백엔드 설정 중...<br/><strong>MoveNet Lightning</strong>';
+    await tf.setBackend('webgl'); await tf.ready();
+    $('loaderMsg').innerHTML='MoveNet 모델 초기화 중...<br/><strong>MoveNet Lightning</strong>';
+    detector = await poseDetection.createDetector(
+      poseDetection.SupportedModels.MoveNet,
+      {modelType:poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,enableSmoothing:true}
+    );
+    setStatus('ready','AI 준비 완료');
+    $('analyzeBtn').disabled=false;
+    $('loader').classList.add('hidden');
+    showToast('AI 준비 완료!');
+  }catch(e){
+    setStatus('err','오류');
+    $('loaderMsg').innerHTML='오류: '+e.message+'<br/>건너뛰기를 눌러주세요.';
+  }
+}
+
+function setStatus(cls,msg){$('statusDot').className='dot '+cls;$('statusText').textContent=msg;}
+
+// ── TABS ──
+function showTab(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  $('page-'+name).classList.add('active');
+  $('tab-'+name).classList.add('active');
+  if(name==='camera') startCamera();
+  else stopCamera();
+}
+function goCamera(){showTab('camera');}
+function goUpload(){showTab('upload');}
+
+// ── CAMERA ──
+async function startCamera(){
+  if(camStream) return;
+  try{
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode,width:{ideal:720},height:{ideal:1280}},audio:false
+    });
+    $('camFeed').srcObject=camStream;
+    await $('camFeed').play();
+    $('camFeed').onloadedmetadata=()=>{
+      $('camCanvas').width=$('camFeed').videoWidth;
+      $('camCanvas').height=$('camFeed').videoHeight;
+    };
+  }catch(e){
+    if(e.name==='NotAllowedError') showToast('📷 카메라 권한을 허용해주세요');
+    else if(e.name==='NotFoundError') showToast('📷 카메라를 찾을 수 없습니다');
+    else showToast('⚠️ 카메라 오류: HTTPS 접속이 필요합니다 (ngrok 사용)');
+  }
+}
+function stopCamera(){
+  liveRunning=false; cancelAnimationFrame(rafId);
+  if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
+  $('camFeed').srcObject=null;
+  $('liveBtn').textContent='▶';
+  $('liveBtn').classList.remove('recording');
+  $('camBadge').textContent='⏸ 대기 중';
+  setStatus('ready','준비 완료');
+}
+async function flipCamera(){
+  facingMode=facingMode==='environment'?'user':'environment';
+  stopCamera(); await startCamera();
+}
+function toggleLive(){
+  if(!detector){showToast('⏳ AI 모델 로딩 중...');return;}
+  if(liveRunning){
+    liveRunning=false; cancelAnimationFrame(rafId);
+    $('liveBtn').textContent='▶'; $('liveBtn').classList.remove('recording');
+    $('camBadge').textContent='⏸ 대기 중';
+    setStatus('ready','준비 완료');
+  } else {
+    liveRunning=true;
+    $('liveBtn').textContent='⏸'; $('liveBtn').classList.add('recording');
+    $('camBadge').textContent='🔴 분석 중';
+    setStatus('live','실시간 분석');
+    liveLoop();
+  }
+}
+async function liveLoop(){
+  if(!liveRunning) return;
+  const vid=$('camFeed');
+  if(vid.readyState>=2){
+    try{
+      const poses=await detector.estimatePoses(vid);
+      if(poses.length>0){
+        const kps=poses[0].keypoints;
+        drawSkel($('camCanvas'),kps);
+        const m=computeM(kps), s=computeS(m);
+        addH(s); updateUI(m,s);
+        $('camPhase').textContent=getPhase(kps);
+        if(m.spine!==undefined) $('ca-spine').textContent=m.spine;
+        if(m.shoulder!==undefined) $('ca-sh').textContent=m.shoulder;
+        if(m.hip!==undefined) $('ca-hip').textContent=m.hip;
+        if(m.knee!==undefined) $('ca-knee').textContent=m.knee;
+      }
+    }catch(e){}
+  }
+  rafId=requestAnimationFrame(liveLoop);
+}
+
+// ── VIDEO UPLOAD ──
+$('file-input').addEventListener('change',e=>{if(e.target.files[0])loadVideo(e.target.files[0]);});
+$('upload-zone').addEventListener('dragover',e=>{e.preventDefault();});
+$('upload-zone').addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])loadVideo(e.dataTransfer.files[0]);});
+function loadVideo(file){
+  const url=URL.createObjectURL(file);
+  $('videoEl').src=url; $('videoEl').load();
+  $('upload-zone').style.display='none';
+  $('video-analysis-area').style.display='block';
+  resetHistory();
+  $('videoEl').onloadedmetadata=()=>{
+    $('vidCanvas').width=$('videoEl').videoWidth;
+    $('vidCanvas').height=$('videoEl').videoHeight;
+  };
+  showToast('✅ 영상 로드 완료!');
+}
+function resetUpload(){
+  videoRunning=false; cancelAnimationFrame(rafId);
+  $('videoEl').pause(); $('videoEl').src='';
+  $('upload-zone').style.display='block';
+  $('video-analysis-area').style.display='none';
+  $('file-input').value='';
+  $('analyzeBtn').disabled=!detector; $('stopVidBtn').disabled=true;
+}
+function startVideoAnalysis(){
+  if(!detector){showToast('⏳ AI 로딩 중...');return;}
+  videoRunning=true; $('analyzeBtn').disabled=true; $('stopVidBtn').disabled=false;
+  setStatus('live','영상 분석 중');
+  $('videoEl').play(); videoLoop();
+}
+function stopVideoAnalysis(){
+  videoRunning=false; cancelAnimationFrame(rafId);
+  $('videoEl').pause(); $('analyzeBtn').disabled=false; $('stopVidBtn').disabled=true;
+  setStatus('ready','준비 완료');
+}
+async function videoLoop(){
+  const vid=$('videoEl');
+  if(!videoRunning||vid.paused||vid.ended){if(vid.ended)setStatus('ready','분석 완료');return;}
+  try{
+    const poses=await detector.estimatePoses(vid);
+    if(poses.length>0){
+      const kps=poses[0].keypoints;
+      drawSkel($('vidCanvas'),kps);
+      const phase=getPhase(kps);
+      const m=computeM(kps),s=computeS(m);
+      addH(s); updateUI(m,s);
+    }
+  }catch(e){console.error('videoLoop:',e);}
+  rafId=requestAnimationFrame(videoLoop);
+}
+
+// ── POSE MATH ──
+function ok(kps,i){return kps[i]&&kps[i].score>0.2;}
+function ang(a,b,c){
+  const v1={x:a.x-b.x,y:a.y-b.y},v2={x:c.x-b.x,y:c.y-b.y};
+  const d=v1.x*v2.x+v1.y*v2.y,m=Math.sqrt((v1.x**2+v1.y**2))*Math.sqrt((v2.x**2+v2.y**2));
+  return Math.round(Math.acos(Math.max(-1,Math.min(1,d/m)))*180/Math.PI);
+}
+function la(p1,p2){return Math.round(Math.abs(Math.atan2(p2.y-p1.y,p2.x-p1.x)*180/Math.PI));}
+function va(p1,p2){return Math.round(Math.atan2(Math.abs(p2.x-p1.x),Math.abs(p2.y-p1.y))*180/Math.PI);}
+function dist(p1,p2){return Math.round(Math.sqrt((p2.x-p1.x)**2+(p2.y-p1.y)**2));}
+function computeM(kps){
+  const m={};
+  // Spine, shoulder, hip, X-Factor
+  if(ok(kps,5)&&ok(kps,6)&&ok(kps,11)&&ok(kps,12)){
+    const smx=(kps[5].x+kps[6].x)/2, smy=(kps[5].y+kps[6].y)/2;
+    const hmx=(kps[11].x+kps[12].x)/2, hmy=(kps[11].y+kps[12].y)/2;
+    m.spine=va({x:hmx,y:hmy},{x:smx,y:smy});
+    m.shoulder=la(kps[5],kps[6]); m.hip=la(kps[11],kps[12]);
+    m.xf=Math.abs(m.shoulder-m.hip);
+    // Weight center (hip center vs ankle center)
+    if(ok(kps,15)&&ok(kps,16)){
+      const amx=(kps[15].x+kps[16].x)/2;
+      m.weightCenter=Math.round(hmx-amx); // positive=forward, negative=back
+    }
+  }
+  // Knee angles
+  if(ok(kps,11)&&ok(kps,13)&&ok(kps,15)) m.knee=ang(kps[11],kps[13],kps[15]);
+  if(ok(kps,12)&&ok(kps,14)&&ok(kps,16)) m.rknee=ang(kps[12],kps[14],kps[16]);
+  // Knee symmetry
+  if(m.knee!==undefined&&m.rknee!==undefined) m.kneeSym=Math.abs(m.knee-m.rknee);
+  // Elbow angles
+  if(ok(kps,6)&&ok(kps,8)&&ok(kps,10)) m.elbow=ang(kps[6],kps[8],kps[10]);
+  if(ok(kps,5)&&ok(kps,7)&&ok(kps,9)) m.lelbow=ang(kps[5],kps[7],kps[9]);
+  // Head position (nose x vs shoulder midpoint x)
+  if(ok(kps,0)&&ok(kps,5)&&ok(kps,6)){
+    const shMidX=(kps[5].x+kps[6].x)/2;
+    m.headPos=Math.round(kps[0].x-shMidX); // positive=forward lean
+  }
+  // Neck tilt (nose vs shoulder midpoint vertical angle)
+  if(ok(kps,0)&&ok(kps,5)&&ok(kps,6)){
+    const shMid={x:(kps[5].x+kps[6].x)/2, y:(kps[5].y+kps[6].y)/2};
+    m.neckTilt=va(shMid,kps[0]);
+  }
+  // Foot width (stance width)
+  if(ok(kps,15)&&ok(kps,16)) m.footWidth=dist(kps[15],kps[16]);
+  // Wrist velocity
+  if(ok(kps,10)){
+    const wy=kps[10].y;
+    if(prevWristY!==null){
+      const vel=Math.abs(wy-prevWristY);
+      wristVelocities.push(vel);
+      if(wristVelocities.length>10) wristVelocities.shift();
+      m.wristVel=Math.round(wristVelocities.reduce((a,b)=>a+b,0)/wristVelocities.length);
+    }
+    prevWristY=wy;
+  }
+  m.det=kps.filter(k=>k.score>0.25).length;
+  return m;
+}
+function computeS(m){
+  const s={};
+  if(m.spine!==undefined) s.spine=Math.max(0,Math.min(100,100-Math.abs(m.spine-7)*5));
+  if(m.xf!==undefined) s.xf=Math.max(0,Math.min(100,100-Math.abs(m.xf-47)*2));
+  if(m.knee!==undefined) s.knee=Math.max(0,Math.min(100,100-Math.abs(m.knee-150)*2));
+  if(m.elbow!==undefined) s.elbow=Math.max(0,Math.min(100,100-Math.abs(m.elbow-110)*1.5));
+  if(m.kneeSym!==undefined) s.kneeSym=Math.max(0,Math.min(100,100-m.kneeSym*3));
+  if(m.neckTilt!==undefined) s.neckTilt=Math.max(0,Math.min(100,100-Math.abs(m.neckTilt-15)*4));
+  return s;
+}
+// Tempo tracking (wrist rise → peak → return = one swing)
+function trackTempo(kps){
+  if(!ok(kps,10)||!ok(kps,11)) return;
+  const wy=kps[10].y, hy=kps[11].y;
+  const now=Date.now();
+  const aboveHip=hy-wy; // positive = wrist above hip
+  const threshold=hy*0.12; // 12% of hip height as trigger
+
+  if(!tempoData.tracking){
+    // Start tracking when wrist clearly rises above hip
+    if(aboveHip>threshold){
+      tempoData.tracking=true;
+      tempoData.bsStart=now;
+      tempoData.peakY=wy;
+      tempoData.peakT=now;
+    }
+  } else {
+    // Update peak (highest point = smallest y value)
+    if(wy<tempoData.peakY){tempoData.peakY=wy;tempoData.peakT=now;}
+    // Impact: wrist returns near hip level AND enough time has passed
+    const ds=now-tempoData.peakT;
+    const bs=tempoData.peakT-tempoData.bsStart;
+    if(aboveHip<threshold*0.4&&now-tempoData.bsStart>400){
+      if(bs>100&&ds>80){
+        tempoData.bsMs=bs;
+        tempoData.dsMs=ds;
+        tempoData.tempoRatio=Math.round((bs/ds)*10)/10;
+      }
+      tempoData.tracking=false; // reset for next swing
+    }
+  }
+}
+function resetHistory(){sh={spine:[],xf:[],knee:[],elbow:[],rknee:[],lelbow:[],head:[],footW:[],wCenter:[],kneeSym:[],neckTilt:[]};tempoData={tracking:false,bsStart:0,peakY:Infinity,peakT:0,bsMs:0,dsMs:0,tempoRatio:0};prevWristY=null;wristVelocities=[];}
+function addH(s){
+  const add=(k,v)=>{if(v!==undefined){sh[k].push(v);if(sh[k].length>HL)sh[k].shift();}};
+  add('spine',s.spine);add('xf',s.xf);add('knee',s.knee);add('elbow',s.elbow);
+  add('rknee',s.rknee);add('lelbow',s.lelbow);add('kneeSym',s.kneeSym);add('neckTilt',s.neckTilt);
+}
+function avg(a){return a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):0;}
+function getPhase(kps){
+  const rwy=ok(kps,10)?kps[10].y:null, hy=ok(kps,11)?kps[11].y:null;
+  const lwy=ok(kps,9)?kps[9].y:null;
+  if(!rwy||!hy) return '🔍 감지 중';
+  trackTempo(kps);
+  if(rwy<hy*0.6) return '🔙 백스윙 탑';
+  if(rwy<hy*0.85) return '🔄 다운스윙';
+  if(Math.abs(rwy-hy)<40) return '💥 임팩트';
+  if(lwy&&lwy<hy*0.7) return '🏁 팔로우스루';
+  return '🏌️ 어드레스';
+}
+
+// ── DRAW ──
+function drawSkel(canvas,kps){
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.lineWidth=4; ctx.shadowBlur=15; ctx.shadowColor='#22c55e'; ctx.strokeStyle='#22c55e';
+  SKEL.forEach(([i,j])=>{
+    if(ok(kps,i)&&ok(kps,j)){
+      ctx.beginPath();ctx.moveTo(kps[i].x,kps[i].y);ctx.lineTo(kps[j].x,kps[j].y);ctx.stroke();
+    }
+  });
+  kps.forEach((kp,i)=>{
+    if(kp.score>0.25){
+      ctx.beginPath();ctx.arc(kp.x,kp.y,i<=4?5:8,0,2*Math.PI);
+      ctx.fillStyle=i<=4?'#f59e0b':'#22c55e';ctx.shadowColor=ctx.fillStyle;ctx.fill();
+    }
+  });
+}
+
+// ── UI UPDATE ──
+function cv(el,val,ideal,tol){
+  el.className='av';
+  if(Math.abs(val-ideal)>tol*2) el.className='av bad';
+  else if(Math.abs(val-ideal)>tol) el.className='av warn';
+}
+function setBar(bid,nid,val){$(bid).style.width=val+'%';$(nid).textContent=Math.round(val);}
+function safeSet(id,txt){const el=$(id);if(el)el.textContent=txt;}
+function updateUI(m,s){
+  if(m.spine!==undefined){$('spineVal').textContent=m.spine+'°';cv($('spineVal'),m.spine,7,5);}
+  if(m.shoulder!==undefined) $('shoulderVal').textContent=m.shoulder+'°';
+  if(m.hip!==undefined) $('hipVal').textContent=m.hip+'°';
+  if(m.knee!==undefined){$('kneeVal').textContent=m.knee+'°';cv($('kneeVal'),m.knee,150,20);}
+  if(m.elbow!==undefined){$('elbowVal').textContent=m.elbow+'°';cv($('elbowVal'),m.elbow,110,20);}
+  $('kpCount').textContent=(m.det||0)+'/17';
+  // Extended metrics
+  safeSet('rkneeVal', m.rknee!==undefined?m.rknee+'°':'--');
+  safeSet('lelbowVal', m.lelbow!==undefined?m.lelbow+'°':'--');
+  safeSet('kneeSymVal', m.kneeSym!==undefined?m.kneeSym+'°':'--');
+  safeSet('headPosVal', m.headPos!==undefined?(m.headPos>0?'+':'')+m.headPos+'px':'--');
+  safeSet('neckTiltVal', m.neckTilt!==undefined?m.neckTilt+'°':'--');
+  safeSet('footWidthVal', m.footWidth!==undefined?m.footWidth+'px':'--');
+  safeSet('weightCenterVal', m.weightCenter!==undefined?(m.weightCenter>0?'우':'좌')+' '+Math.abs(m.weightCenter)+'px':'--');
+  safeSet('wristVelVal', m.wristVel!==undefined?m.wristVel+'px/f':'--');
+  // Tempo
+  if(tempoData.tempoRatio>0){
+    safeSet('tempoVal', tempoData.tempoRatio+':1');
+    safeSet('bsTimeVal', tempoData.bsMs+'ms');
+    safeSet('dsTimeVal', tempoData.dsMs+'ms');
+    const tdiff=Math.abs(tempoData.tempoRatio-3);
+    const el=$('tempoVal');
+    if(el){el.className='av'; if(tdiff>1) el.className='av bad'; else if(tdiff>0.5) el.className='av warn';}
+  }
+  const as=avg(sh.spine),axf=avg(sh.xf),ak=avg(sh.knee),ae=avg(sh.elbow);
+  const akSym=avg(sh.kneeSym),aNeck=avg(sh.neckTilt);
+  setBar('barSpine','numSpine',as);setBar('barX','numX',axf);setBar('barKnee','numKnee',ak);setBar('barElbow','numElbow',ae);
+  safeSetBar('barKneeSym','numKneeSym',akSym?Math.max(0,100-akSym*3):0);
+  safeSetBar('barNeck','numNeck',aNeck?Math.max(0,Math.min(100,100-Math.abs(aNeck-15)*4)):0);
+  const ov=Math.round((as+axf+ak+ae)/4);
+  if(ov>0){
+    $('overallScore').textContent=ov;
+    $('scoreRing').style.background='conic-gradient(#22c55e '+(ov/100*360)+'deg,rgba(255,255,255,.07) '+(ov/100*360)+'deg)';
+    $('scoreSubtext').textContent='실시간 분석 중...';
+  }
+  const fb=[];
+  if(m.spine!==undefined){
+    if(m.spine<3) fb.push({i:'⚠️',t:'척추를 5-10° 앞으로 기울이세요'});
+    else if(m.spine>15) fb.push({i:'⚠️',t:'척추가 과도하게 기울었습니다'});
+    else fb.push({i:'✅',t:'척추 기울기 '+m.spine+'° — 이상적입니다'});
+  }
+  if(m.xf!==undefined){
+    if(m.xf<30) fb.push({i:'⚠️',t:'어깨 회전을 더 크게 하세요 (현재 X-Factor '+m.xf+'°)'});
+    else if(m.xf>60) fb.push({i:'⚠️',t:'X-Factor 과도 ('+m.xf+'°), 허리 부상 주의'});
+    else fb.push({i:'✅',t:'X-Factor '+m.xf+'° — 좋습니다!'});
+  }
+  if(m.knee!==undefined){
+    if(m.knee<120) fb.push({i:'⚠️',t:'무릎을 너무 많이 굽히고 있습니다'});
+    else if(m.knee>165) fb.push({i:'⚠️',t:'무릎을 살짝 굽혀주세요'});
+    else fb.push({i:'✅',t:'왼쪽 무릎 '+m.knee+'° — 안정적입니다'});
+  }
+  if(m.kneeSym!==undefined){
+    if(m.kneeSym>25) fb.push({i:'⚠️',t:'좌우 무릎 비대칭 ('+m.kneeSym+'°) — 균형을 잡으세요'});
+    else fb.push({i:'✅',t:'무릎 좌우 대칭 양호 (차이 '+m.kneeSym+'°)'});
+  }
+  if(tempoData.tempoRatio>0){
+    const r=tempoData.tempoRatio;
+    if(r<2) fb.push({i:'⚠️',t:'템포가 너무 빠릅니다 ('+r+':1) — 백스윙을 천천히'});
+    else if(r>4) fb.push({i:'⚠️',t:'템포가 너무 느립니다 ('+r+':1)'});
+    else fb.push({i:'✅',t:'템포 '+r+':1 — 이상적입니다! (목표 3:1)'});
+  }
+  if(fb.length) $('feedbackList').innerHTML=fb.map(f=>'<li class="fi"><span class="fi-i">'+f.i+'</span><span>'+f.t+'</span></li>').join('');
+  const phase=document.querySelector('.page.active .cam-phase')?$('camPhase').textContent:'';
+  $('swingPhase').textContent=phase||'🔄 분석 중';
+}
+function safeSetBar(bid,nid,val){const b=$(bid),n=$(nid);if(b)b.style.width=val+'%';if(n)n.textContent=Math.round(val);}
+
+// ── HOGAN LESSON TOGGLE ──
+function toggleLesson(card){
+  const body=card.querySelector('.lesson-body');
+  body.classList.toggle('open');
+}
+
+// ── HOGAN Q&A CHAT ENGINE ──
+const HOGAN_KB=[
+  {k:['그립','grip','손잡'],r:'호건의 그립 원칙: 배돈(Vardon) 그립을 사용하세요. 왼손은 손가락 패드로 클럽을 잡고 V자가 오른쪽 어깨를 향해야 합니다. 오른손은 부드럽게 감싸되 압력은 5-6 정도로 유지하세요. "그립이 잘못되면 아무것도 제대로 될 수 없다" — 호건'},
+  {k:['척추','spine','기울','전경','어드레스'],r:'호건의 척추 기울기: 어드레스 시 척추를 5-10° 앞으로 기울이세요. 이 앱에서 척추 5-10°가 이상적으로 표시됩니다. 너무 곧으면 백스윙 코일이 어렵고, 너무 기울면 임팩트에서 흐름이 깨집니다.'},
+  {k:['백스윙','backswing','코일','어깨 회전','회전'],r:'호건의 백스윙: 왼 어깨를 턱 아래까지 90° 회전시키고, 힙은 45° 이하로 제한해 최대 X-Factor를 만드세요. "상체는 최대한, 하체는 최소한"이 핵심입니다. 오른 무릎 각도를 유지하며 왼 무릎이 오른쪽으로 가도록 허용하세요.'},
+  {k:['다운스윙','downswing','힙','캐스팅','hip','leverage'],r:'호건의 다운스윙 비밀: 왼쪽 힙이 타겟을 향해 슬라이드하며 다운스윙을 시작합니다. 손이나 팔이 먼저 내려오면 안 됩니다(= 캐스팅). 이 순서가 파워 생성의 핵심입니다. 무릎이 먼저, 힙이 따라오고, 팔은 마지막으로 내려옵니다.'},
+  {k:['임팩트','impact','접촉'],r:'호건의 임팩트: 임팩트 시 몸은 완전히 내부를 향하며, 왼팔이 완전히 펴져야 합니다. 힙은 타겟 방향으로 45° 열려 있어야 합니다. "다운스윙을 올바르게 하면 임팩트는 스스로 해결된다" — 호건'},
+  {k:['팔로우','follow','피니시','finish'],r:'호건의 팔로우스루: 오른 어깨가 낮게 타겟을 향해 회전하며 몸의 무게가 왼발로 완전히 이동합니다. 아름다운 피니시 자세를 목표로 하세요 — 그것이 올바른 스윙의 결과입니다.'},
+  {k:['x-factor','xfactor','x factor','분리'],r:'X-Factor는 어깨와 힙의 회전 차이입니다. 호건은 이를 최대화하여 파워를 생성했습니다. 이 앱 기준 40-55°가 이상적입니다. 현재 측정값을 결과 탭에서 확인하세요.'},
+  {k:['무릎','knee','다리'],r:'호건의 무릎 사용법: 어드레스에서 양 무릎을 약간 안쪽으로 굽혀 스프링처럼 준비합니다. 백스윙에서 오른 무릎 각도를 유지하고, 다운스윙에서 왼 무릎이 타겟을 향해 먼저 움직입니다. 이 앱 기준 최적 무릎 각도는 140-160°입니다.'},
+  {k:['스탠스','stance','발','setup','셋업'],r:'호건의 스탠스: 드라이버 기준 어깨너비 약 1.2배로 발 너비를 유지합니다. 왼발은 30° 열고 오른발은 90° 또는 약간 닫습니다. 무게는 두 발에 균등하게 배분하세요.'},
+  {k:['템포','tempo','리듬','rhythm','속도'],r:'호건의 템포: 백스윙:다운스윙 비율은 3:1이 이상적입니다. 서두르지 말고 백스윙을 천천히, 다운스윙은 자연스럽게 가속합니다. "스윙을 서두르면 모든 것이 무너진다" — 호건'},
+  {k:['내 점수','내 스윙','분석','현재'],r:null},// dynamic
+  {k:['연습','practice','훈련'],r:'호건은 매일 새벽 4시부터 연습했습니다. "나는 연습에서 골프공을 갈 때마다 무언가를 배운다." 중요한 것은 올바른 동작을 반복하는 것입니다. 잘못된 동작의 반복은 오히려 역효과를 냅니다.'},
+  {k:['파워','power','거리','distance'],r:'호건의 파워 원천은 하체입니다. 힙의 회전과 체중 이동이 클럽헤드 속도를 만듭니다. 팔 힘으로 치려 하지 마세요. 큰 근육(엉덩이, 허벅지)이 리드하면 파워는 자연스럽게 따라옵니다.'},
+];
+
+let lastMetrics={};
+function hoganReply(q){
+  const lq=q.toLowerCase();
+  // dynamic score reply
+  if(/내 점수|내 스윙|분석|현재|어때|측정/.test(lq)){
+    const s=avg(sh.spine),xf=avg(sh.xf),k=avg(sh.knee),e=avg(sh.elbow);
+    if(!s&&!xf&&!k) return '아직 분석 데이터가 없습니다. 카메라 탭이나 영상 업로드 탭에서 먼저 AI 분석을 시작해 주세요! 📷';
+    let r='📊 현재 측정값 기반 호건 코칭:\n';
+    if(s) r+=(s>=5&&s<=10?'✅':'⚠️')+' 척추 '+s+'° ('+(s<5?'더 기울이세요':s>10?'과도합니다':'이상적!')+ ')\n';
+    if(xf) r+=(xf>=40&&xf<=55?'✅':'⚠️')+' X-Factor '+xf+'° ('+(xf<40?'어깨 회전 부족':xf>55?'허리 주의':'호건 수준!')+ ')\n';
+    if(k) r+=(k>=140&&k<=165?'✅':'⚠️')+' 무릎 '+k+'° ('+(k<140?'너무 굽음':k>165?'더 굽히세요':'안정적')+ ')';
+    return r;
+  }
+  for(const entry of HOGAN_KB){
+    if(entry.k.some(w=>lq.includes(w))) return entry.r;
+  }
+  return '벤 호건 선생님의 말씀: "골프는 올바른 원칙으로 배워야 한다." 더 구체적으로 질문해 주세요. 그립, 척추, 백스윙, 다운스윙, 임팩트, 템포, 무릎 등에 대해 물어보실 수 있습니다. 🏆';
+}
+function addChatMsg(txt,type){
+  const d=$('chatMsgs');
+  const m=document.createElement('div');
+  m.className='chat-msg '+type;
+  m.style.whiteSpace='pre-line';
+  m.textContent=txt;
+  d.appendChild(m);
+  d.scrollTop=d.scrollHeight;
+}
+function sendChat(){
+  const inp=$('chatInput');
+  const q=inp.value.trim();
+  if(!q) return;
+  addChatMsg(q,'user');
+  inp.value='';
+  setTimeout(()=>addChatMsg(hoganReply(q),'bot'),300);
+}
+function sendHint(txt){
+  $('chatInput').value=txt;
+  sendChat();
+}
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg){
+  clearTimeout(toastTimer);
+  const t=$('toast');t.textContent=msg;t.classList.add('show');
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+init();
+</script>
+</body>
+</html>
