@@ -933,7 +933,6 @@ function toggleLesson(card){
 }
 
 // ── HOGAN Q&A CHAT ENGINE ──
-// ── HOGAN Q&A — 현대 골프의 기초 완전 지식 베이스 ──
 const HOGAN_KB = [
   // 그립 - 왼손
   { k: ['그립', 'grip', '왼손', '리드핸드', '왼손 그립'], r: '【호건 레슨1 — 왼손 그립】\n클럽은 손바닥 뒤꿈치(패드)에서 검지 첫 마디까지 대각선으로 가로질러야 합니다. 마지막 세 손가락(약지·중지·소지)으로 먼저 단단히 감싸 쥐고, 그 다음 엄지를 올려놓습니다(숏 썸).\n\nV자 방향: 왼손 엄지와 검지 사이 V자는 오른쪽 눈(트레일링 아이)을 가리켜야 합니다. 압력은 마지막 세 손가락에 집중하세요.\n\n"그립이 잘못되면 아무것도 제대로 될 수 없다." — 호건' },
@@ -1015,27 +1014,91 @@ function hoganReply(q) {
   }
   return '벤 호건의 말씀: "좋은 골프를 치기 위해 필요한 것은 얼마 안 되는 기본 동작을 올바르게 실행하는 것뿐이다."\n\n그립, 스탠스, 백스윙, 다운스윙, 임팩트, 코일, 플레인, 파워, 연습 방법, 명언 등에 대해 질문해 보세요. 🏆';
 }
-function addChatMsg(txt,type){
-  const d=$('chatMsgs');
-  const m=document.createElement('div');
-  m.className='chat-msg '+type;
-  m.style.whiteSpace='pre-line';
-  m.textContent=txt;
+let activeAI = 'gemini';
+
+function selectAI(type) {
+  activeAI = type;
+  const btnG = $('btnGemini'), btnO = $('btnOpenAI');
+  if (btnG) { btnG.className = 'ai-btn' + (type === 'gemini' ? ' active-gemini' : ''); }
+  if (btnO) { btnO.className = 'ai-btn' + (type === 'openai' ? ' active-openai' : ''); }
+  const msg = type === 'gemini'
+    ? '🤖 Gemini AI로 전환했습니다. 벤 호건에 대해 질문해 보세요!'
+    : '💬 GPT-4o로 전환했습니다. 벤 호건에 대해 질문해 보세요!';
+  addChatMsg(msg, 'bot');
+  const label = $('loadingLabel');
+  if (label) label.textContent = type === 'gemini' ? 'Gemini 답변 중...' : 'GPT-4o 답변 중...';
+}
+
+function buildSwingContext() {
+  const s = avg(sh.spine), xf = avg(sh.xf), k = avg(sh.knee), e = avg(sh.elbow);
+  const kSym = avg(sh.kneeSym), neck = avg(sh.neckTilt);
+  if (!s && !xf && !k) return null;
+  let ctx = '';
+  if (s)    ctx += `척추기울기: ${s}° (목표 5-10°)\n`;
+  if (xf)   ctx += `X-Factor: ${xf}° (목표 40-55°)\n`;
+  if (k)    ctx += `왼쪽무릎: ${k}° (목표 140-165°)\n`;
+  if (e)    ctx += `팔꿈치각도: ${e}° (목표 100-130°)\n`;
+  if (kSym) ctx += `무릎대칭차이: ${kSym}°\n`;
+  if (neck) ctx += `목기울기: ${neck}°\n`;
+  if (tempoData.tempoRatio > 0) ctx += `템포비율: ${tempoData.tempoRatio}:1 (목표 3:1)\n`;
+  const ov = Math.round((s + xf + k + e) / ((s?1:0)+(xf?1:0)+(k?1:0)+(e?1:0)) || 0);
+  if (ov) ctx += `종합점수: ${ov}/100`;
+  return ctx.trim() || null;
+}
+
+function addChatMsg(txt, type) {
+  const d = $('chatMsgs');
+  const m = document.createElement('div');
+  m.className = 'chat-msg ' + type;
+  m.style.whiteSpace = 'pre-line';
+  m.textContent = txt;
   d.appendChild(m);
-  d.scrollTop=d.scrollHeight;
+  d.scrollTop = d.scrollHeight;
 }
-function sendChat(){
-  const inp=$('chatInput');
-  const q=inp.value.trim();
-  if(!q) return;
-  addChatMsg(q,'user');
-  inp.value='';
-  setTimeout(()=>addChatMsg(hoganReply(q),'bot'),300);
+
+async function sendChat() {
+  const inp = $('chatInput');
+  const q = inp.value.trim();
+  if (!q) return;
+  addChatMsg(q, 'user');
+  inp.value = '';
+
+  const loading = $('chatLoading');
+  if (loading) loading.classList.add('show');
+  $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+
+  // 실제 API 호출 시도
+  const swingCtx = buildSwingContext();
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: q,
+        ai: activeAI,
+        swingData: swingCtx
+      })
+    });
+    if (loading) loading.classList.remove('show');
+    if (res.ok) {
+      const data = await res.json();
+      addChatMsg(data.reply || '응답을 받지 못했습니다.', 'bot');
+    } else {
+      // API 오류 → 로컬 fallback
+      addChatMsg(hoganReply(q), 'bot');
+    }
+  } catch (err) {
+    if (loading) loading.classList.remove('show');
+    // 네트워크 오류 → 로컬 fallback
+    addChatMsg(hoganReply(q), 'bot');
+  }
 }
-function sendHint(txt){
-  $('chatInput').value=txt;
+
+function sendHint(txt) {
+  $('chatInput').value = txt;
   sendChat();
 }
+
 
 // ── TOAST ──
 let toastTimer;
