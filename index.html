@@ -254,28 +254,39 @@ html,body{height:100%;overflow:hidden;background:var(--g);color:var(--tp);font-f
 .lesson-tip{background:rgba(245,158,11,.08);border-left:3px solid var(--gold);padding:.65rem .9rem;border-radius:0 8px 8px 0;margin-top:.8rem;font-size:.78rem;color:var(--gl);line-height:1.55}
 .lesson-keywords{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.6rem}
 .lk{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:var(--gold);font-size:.65rem;font-weight:600;padding:.1rem .45rem;border-radius:5px}
-/* ── HOGAN Q&A CHAT ── */
-.chat-wrap{display:flex;flex-direction:column;gap:.6rem}
-.chat-msgs{height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:.5rem;padding:.6rem;background:rgba(0,0,0,.25);border-radius:12px;border:1px solid var(--bd);scroll-behavior:smooth}
-.chat-msgs::-webkit-scrollbar{width:3px}.chat-msgs::-webkit-scrollbar-track{background:transparent}.chat-msgs::-webkit-scrollbar-thumb{background:rgba(245,158,11,.3);border-radius:3px}
-.chat-msg{max-width:88%;padding:.6rem .9rem;border-radius:12px;font-size:.8rem;line-height:1.55}
-.chat-msg.bot{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.22);color:var(--tp);align-self:flex-start;border-radius:4px 14px 14px 14px;animation:fadeIn .2s ease}
-.chat-msg.user{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.22);color:var(--tp);align-self:flex-end;border-radius:14px 4px 14px 14px;animation:fadeIn .2s ease}
+/* ── AI CHAT ── */
+.chat-wrap{display:flex;flex-direction:column;gap:.55rem}
+/* 입력 영역 (위) */
+.chat-input-area{background:rgba(0,0,0,.2);border:1px solid var(--bd);border-radius:14px;padding:.75rem;display:flex;flex-direction:column;gap:.5rem}
 .chat-input-row{display:flex;gap:.5rem}
-.chat-input{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--bd);border-radius:12px;padding:.6rem .9rem;color:var(--tp);font-family:'Inter',sans-serif;font-size:.85rem;outline:none;transition:border-color .2s}
+.chat-input{flex:1;background:rgba(0,0,0,.35);border:1px solid var(--bd);border-radius:10px;padding:.6rem .9rem;color:var(--tp);font-family:'Inter',sans-serif;font-size:.85rem;outline:none;transition:border-color .2s}
 .chat-input:focus{border-color:rgba(245,158,11,.6);box-shadow:0 0 0 2px rgba(245,158,11,.08)}
-.chat-send{background:linear-gradient(135deg,var(--gold),#d97706);color:#000;border:none;border-radius:12px;padding:.6rem 1rem;font-weight:700;font-size:.9rem;cursor:pointer;white-space:nowrap;transition:all .15s;box-shadow:0 2px 8px rgba(245,158,11,.3)}
+.chat-send{background:linear-gradient(135deg,var(--gold),#d97706);color:#000;border:none;border-radius:10px;padding:.6rem 1rem;font-weight:700;font-size:.9rem;cursor:pointer;white-space:nowrap;transition:all .15s;box-shadow:0 2px 8px rgba(245,158,11,.3)}
 .chat-send:active{opacity:.8;transform:scale(.97)}
-.chat-hints{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.2rem}
-.hint-chip{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--gold);font-size:.7rem;font-weight:600;padding:.25rem .65rem;border-radius:20px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.chat-hints{display:flex;gap:.3rem;flex-wrap:wrap}
+.hint-chip{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--gold);font-size:.68rem;font-weight:600;padding:.2rem .6rem;border-radius:20px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .hint-chip:active{background:rgba(245,158,11,.25);transform:scale(.96)}
+/* 답변 영역 (아래) */
+.chat-msgs{min-height:200px;max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:.5rem;padding:.65rem;background:rgba(0,0,0,.22);border-radius:14px;border:1px solid var(--bd);scroll-behavior:smooth}
+.chat-msgs::-webkit-scrollbar{width:3px}.chat-msgs::-webkit-scrollbar-track{background:transparent}.chat-msgs::-webkit-scrollbar-thumb{background:rgba(245,158,11,.3);border-radius:3px}
+.chat-msg{max-width:92%;padding:.6rem .9rem;border-radius:12px;font-size:.8rem;line-height:1.6}
+.chat-msg.bot{background:rgba(245,158,11,.09);border:1px solid rgba(245,158,11,.2);color:var(--tp);align-self:flex-start;border-radius:4px 14px 14px 14px;animation:fadeIn .2s ease}
+.chat-msg.user{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.22);color:var(--tp);align-self:flex-end;border-radius:14px 4px 14px 14px;animation:fadeIn .2s ease}
+.chat-msg.analysis{background:rgba(26,115,232,.1);border:1px solid rgba(26,115,232,.3);color:var(--tp);align-self:flex-start;border-radius:4px 14px 14px 14px;animation:fadeIn .2s ease;max-width:98%}
+/* 후속 질문 카드 */
+.suggestion-wrap{display:flex;flex-direction:column;gap:.35rem;padding:.3rem 0}
+.suggestion-label{font-size:.68rem;color:var(--ts);opacity:.7;padding-left:.2rem}
+.suggestion-cards{display:flex;flex-direction:column;gap:.3rem}
+.suggestion-card{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:.5rem .8rem;font-size:.75rem;color:var(--ts);cursor:pointer;transition:all .2s;text-align:left}
+.suggestion-card:hover{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.4);color:var(--tp);transform:translateX(3px)}
+.suggestion-card:active{transform:scale(.98)}
 /* AI Toggle */
-.ai-toggle{display:flex;gap:.5rem;margin-bottom:.4rem}
-.ai-btn{flex:1;padding:.5rem .6rem;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:rgba(134,239,172,.45);font-size:.8rem;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.35rem}
+.ai-toggle{display:flex;gap:.5rem;margin-bottom:.2rem}
+.ai-btn{flex:1;padding:.45rem .6rem;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:rgba(134,239,172,.45);font-size:.78rem;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.35rem}
 .ai-btn.active-gemini{background:rgba(26,115,232,.18);border-color:rgba(26,115,232,.55);color:#60a5fa;box-shadow:0 0 12px rgba(26,115,232,.15)}
 .ai-btn.active-openai{background:rgba(16,163,127,.18);border-color:rgba(16,163,127,.55);color:#34d399;box-shadow:0 0 12px rgba(16,163,127,.15)}
 .ai-btn:active{transform:scale(.97)}
-.chat-loading{display:none;align-items:center;gap:.5rem;padding:.5rem .8rem;font-size:.78rem;color:var(--ts)}
+.chat-loading{display:none;align-items:center;gap:.5rem;padding:.4rem .6rem;font-size:.75rem;color:var(--ts)}
 .chat-loading.show{display:flex}
 .dot-ani{display:flex;gap:4px}
 .dot-ani span{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:dotpulse 1.2s infinite}
@@ -464,31 +475,31 @@ html,body{height:100%;overflow:hidden;background:var(--g);color:var(--tp);font-f
           <div class="chat-wrap">
             <!-- AI 선택 토글 -->
             <div class="ai-toggle">
-              <button class="ai-btn active-gemini" id="btnGemini" onclick="selectAI('gemini')">
-                🤖 Gemini
-              </button>
-              <button class="ai-btn" id="btnOpenAI" onclick="selectAI('openai')">
-                💬 GPT-4o
-              </button>
+              <button class="ai-btn active-gemini" id="btnGemini" onclick="selectAI('gemini')">🤖 Gemini</button>
+              <button class="ai-btn" id="btnOpenAI" onclick="selectAI('openai')">💬 GPT-4o</button>
             </div>
-            <div class="chat-msgs" id="chatMsgs">
-              <div class="chat-msg bot">안녕하세요! 🤖 Gemini AI와 연결되어 있습니다.<br/>골프 스윙, 자세, 연습 방법 등 무엇이든 자유롭게 질문해 보세요!</div>
+            <!-- ① 질문 입력 영역 (위) -->
+            <div class="chat-input-area">
+              <div class="chat-input-row">
+                <input class="chat-input" id="chatInput" type="text" placeholder="골프에 대해 질문하세요..." onkeydown="if(event.key==='Enter')sendChat()"/>
+                <button class="chat-send" onclick="sendChat()">✈️ 전송</button>
+              </div>
+              <div class="chat-hints">
+                <span class="hint-chip" onclick="sendHint('올바른 그립 방법을 알려줘')">그립</span>
+                <span class="hint-chip" onclick="sendHint('어드레스 자세를 어떻게 해야 해?')">어드레스</span>
+                <span class="hint-chip" onclick="sendHint('백스윙 올바른 방법')">백스윙</span>
+                <span class="hint-chip" onclick="sendHint('다운스윙 시 주의할 점')">다운스윙</span>
+                <span class="hint-chip" onclick="sendHint('드라이버 비거리 늘리는 방법')">비거리</span>
+                <span class="hint-chip" onclick="sendHint('현재 내 스윙 분석해줘')">내 스윙 분석</span>
+              </div>
             </div>
+            <!-- ② 답변(메시지) 영역 (아래) -->
             <div class="chat-loading" id="chatLoading">
               <div class="dot-ani"><span></span><span></span><span></span></div>
               <span id="loadingLabel">Gemini 답변 중...</span>
             </div>
-            <div class="chat-hints">
-              <span class="hint-chip" onclick="sendHint('올바른 그립 방법을 알려줘')">그립</span>
-              <span class="hint-chip" onclick="sendHint('어드레스 자세를 어떻게 해야 해?')">어드레스</span>
-              <span class="hint-chip" onclick="sendHint('백스윙 올바른 방법')">백스윙</span>
-              <span class="hint-chip" onclick="sendHint('다운스윙 시 주의할 점')">다운스윙</span>
-              <span class="hint-chip" onclick="sendHint('드라이버 비거리 늘리는 방법')">비거리</span>
-              <span class="hint-chip" onclick="sendHint('현재 내 스윙 분석해줘')">내 스윙 분석</span>
-            </div>
-            <div class="chat-input-row">
-              <input class="chat-input" id="chatInput" type="text" placeholder="골프에 대해 질문하세요..." onkeydown="if(event.key==='Enter')sendChat()"/>
-              <button class="chat-send" onclick="sendChat()">✈️ 전송</button>
+            <div class="chat-msgs" id="chatMsgs">
+              <div class="chat-msg bot">안녕하세요! 🤖 Gemini AI와 연결되어 있습니다.<br/>골프 스윙, 자세, 연습 방법 등 무엇이든 자유롭게 질문해 보세요!</div>
             </div>
           </div>
         </div>
@@ -710,10 +721,19 @@ function stopVideoAnalysis(){
   videoRunning=false; cancelAnimationFrame(videoRafId); videoRafId=null;
   $('videoEl').pause(); $('analyzeBtn').disabled=false; $('stopVidBtn').disabled=true;
   setStatus('ready','준비 완료');
+  // 수동 중지시에도 분석 데이터가 있으면 리포트 출력
+  setTimeout(()=>autoAnalysisReport(),600);
 }
 async function videoLoop(){
   const vid=$('videoEl');
-  if(!videoRunning||vid.paused||vid.ended){if(vid.ended)setStatus('ready','분석 완료');return;}
+  if(!videoRunning||vid.paused||vid.ended){
+    if(vid.ended){
+      setStatus('ready','분석 완료');
+      showToast('🏑 영상 분석 완료! AI 리포트 생성 중...');
+      setTimeout(()=>autoAnalysisReport(),800);
+    }
+    return;
+  }
   try{
     const poses=await detector.estimatePoses(vid);
     if(poses.length>0){
@@ -992,58 +1012,115 @@ function buildSwingContext() {
   return ctx.trim() || null;
 }
 
-function addChatMsg(txt, type) {
-  const d = $('chatMsgs');
-  const m = document.createElement('div');
-  m.className = 'chat-msg ' + type;
-  m.style.whiteSpace = 'pre-line';
-  m.textContent = txt;
-  d.appendChild(m);
-  d.scrollTop = d.scrollHeight;
+// ── Gemini 직접 호출 fallback ──
+const GEMINI_EP='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const SYS_PROMPT='당신은 전문적인 AI 골프 코치입니다. 골프 스윙, 자세, 그립, 스탠스, 백스윙, 다운스윙, 임팩트, 팔로우스루, 코스 전략, 멘탈 관리 등 골프에 관한 모든 질문에 전문적으로 답변합니다. AI 수치 기준: 척추 5-10°, X-Factor 40-55°, 무릎 140-165°, 팔꿈치 100-130°, 템포 3:1. 한국어로 400자 내외.';
+async function callGeminiDirect(msg,ctx){
+  const k=window._geminiKey||'';if(!k)return null;
+  const sys=SYS_PROMPT+(ctx?'\n\n[현재 스윙 분석 데이터]\n'+ctx:'');
+  const r=await fetch(GEMINI_EP+'?key='+k,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({system_instruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:msg}]}],generationConfig:{maxOutputTokens:600,temperature:0.7}})
+  });
+  const d=await r.json();if(!r.ok)throw new Error(d.error?.message);
+  return d.candidates?.[0]?.content?.parts?.[0]?.text||null;
 }
 
-async function sendChat() {
-  const inp = $('chatInput');
-  const q = inp.value.trim();
-  if (!q) return;
-  addChatMsg(q, 'user');
-  inp.value = '';
+function addChatMsg(txt,type){
+  const d=$('chatMsgs'),m=document.createElement('div');
+  m.className='chat-msg '+type;m.style.whiteSpace='pre-line';m.textContent=txt;
+  d.appendChild(m);d.scrollTop=d.scrollHeight;return m;
+}
 
-  const loading = $('chatLoading');
-  if (loading) loading.classList.add('show');
-  $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+// 후속 질문 카드
+function showSuggestionCards(cards){
+  const d=$('chatMsgs');
+  const wrap=document.createElement('div');wrap.className='suggestion-wrap';
+  const label=document.createElement('div');label.className='suggestion-label';label.textContent='💬 다음으로 물어볼 수 있어요';
+  const sc=document.createElement('div');sc.className='suggestion-cards';
+  cards.forEach(q=>{
+    const btn=document.createElement('button');btn.className='suggestion-card';btn.textContent=q;
+    btn.onclick=()=>{wrap.remove();sendHint(q);};sc.appendChild(btn);
+  });
+  wrap.appendChild(label);wrap.appendChild(sc);d.appendChild(wrap);d.scrollTop=d.scrollHeight;
+}
+function getFollowupCards(q){
+  const lq=q.toLowerCase();
+  if(/그립|grip/.test(lq)) return ['왼손 그립 압력은 얼마나?','그립이 슬라이스에 미치는 영향?','인터로킹 vs 오버래핑 차이는?'];
+  if(/어드레스|스탠스|자세/.test(lq)) return ['체중 배분은 어떻게?','볼 위치는 클럽마다 다른가?','무릎 굽힘 정도는 얼마가 적당해?'];
+  if(/백스윙/.test(lq)) return ['백스윙 탑에서 왼팔 역할은?','어깨 90° 회전 훈련 방법은?','테이크어웨이를 올바르게 하려면?'];
+  if(/다운스윙|힙/.test(lq)) return ['다운스윙 체중이동 방법은?','캐스팅 방지 드릴은?','오른 팔꿈치 역할은?'];
+  if(/임팩트/.test(lq)) return ['핸즈 어헤드 유지 방법은?','임팩트 존 연습 방법은?','팔로우스루 연결 방법은?'];
+  if(/비거리|드라이버|거리|파워/.test(lq)) return ['스윙 스피드 올리는 훈련은?','드라이버 어퍼블로 타격법은?','X-Factor 회전 파워 방법은?'];
+  if(/분석|점수/.test(lq)) return ['척추 기울기 개선 방법은?','X-Factor 높이는 방법은?','스윙 템포 3:1 달성 연습은?'];
+  return ['그립을 올바르게 하는 방법은?','다운스윙 핵심 포인트는?','비거리 늘리는 방법은?'];
+}
 
-  // 실제 API 호출 시도
-  const swingCtx = buildSwingContext();
-  try {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: q,
-        ai: activeAI,
-        swingData: swingCtx
-      })
-    });
-    if (loading) loading.classList.remove('show');
-    if (res.ok) {
-      const data = await res.json();
-      addChatMsg(data.reply || '응답을 받지 못했습니다.', 'bot');
-    } else {
-      // API 오류 안내
-      addChatMsg('❌ API 서버 오류가 발생했습니다. Vercel 환경변수(API Key)를 확인해 주세요.', 'bot');
-    }
-  } catch (err) {
-    if (loading) loading.classList.remove('show');
-    // 네트워크 오류 안내
-    addChatMsg('⚠️ 네트워크 오류 또는 API 연결에 실패했습니다. 인터넷 연결을 확인해 주세요.', 'bot');
+async function sendChat(){
+  const inp=$('chatInput');const q=inp.value.trim();if(!q)return;
+  addChatMsg(q,'user');inp.value='';
+  const loading=$('chatLoading');if(loading)loading.classList.add('show');
+  $('chatMsgs').scrollTop=$('chatMsgs').scrollHeight;
+  const swingCtx=buildSwingContext();let reply=null;
+  try{
+    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:q,ai:activeAI,swingData:swingCtx})});
+    if(res.ok){const data=await res.json();reply=data.reply||'응답을 받지 못했습니다.';}
+    else{reply=await callGeminiDirect(q,swingCtx);if(!reply)reply='⚠️ AI 연결 오류입니다. 잠시 후 다시 시도해 주세요.';}
+  }catch(err){
+    if(loading)loading.classList.remove('show');
+    try{reply=await callGeminiDirect(q,swingCtx);}catch(e2){}
+    if(!reply)reply='⚠️ 네트워크 오류입니다. 인터넷 연결을 확인해 주세요.';
   }
+  if(loading)loading.classList.remove('show');
+  addChatMsg(reply,'bot');
+  showSuggestionCards(getFollowupCards(q));
 }
 
-function sendHint(txt) {
-  $('chatInput').value = txt;
-  sendChat();
+// 영상 분석 완료 자동 리포트
+async function autoAnalysisReport(){
+  const s=avg(sh.spine),xf=avg(sh.xf),k=avg(sh.knee),e=avg(sh.elbow);
+  const kSym=avg(sh.kneeSym),neck=avg(sh.neckTilt);
+  if(!s&&!xf&&!k)return;
+  const cnt=(s?1:0)+(xf?1:0)+(k?1:0)+(e?1:0);
+  const ov=cnt?Math.round(((s||0)+(xf||0)+(k||0)+(e||0))/cnt):0;
+  const issues=[],goods=[];
+  if(s){if(s<3)issues.push('척추가 너무 곧음('+s+'°) → 5-10° 앞으로 기울이세요');else if(s>15)issues.push('척추 과도 기울기('+s+'°) → 15° 이하로 유지하세요');else goods.push('척추 기울기('+s+'°) 양호');}
+  if(xf){if(xf<30)issues.push('X-Factor('+xf+'°) 부족 → 어깨 회전 90°로 늘리세요');else if(xf>60)issues.push('X-Factor('+xf+'°) 과도 → 허리 부상 위험');else goods.push('X-Factor('+xf+'°) 이상적');}
+  if(k){if(k<130)issues.push('무릎 과굴곡('+k+'°) → 140° 이상으로 조정');else if(k>170)issues.push('무릎 과신전('+k+'°) → 살짝 굽히세요');else goods.push('무릎 각도('+k+'°) 안정적');}
+  if(e){if(e<90)issues.push('팔꿈치 과굴곡('+e+'°) → 임팩트 시 더 펴주세요');else if(e>140)issues.push('팔 과신전('+e+'°) → 적당히 굽히세요');else goods.push('팔꿈치('+e+'°) 적절');}
+  if(kSym>25)issues.push('좌우 무릎 불균형('+kSym+'°) → 균형 잡힌 스탠스 필요');
+  if(tempoData.tempoRatio>0){const r=tempoData.tempoRatio;if(r<2)issues.push('템포('+r+':1) 너무 빠름 → 백스윙 천천히');else if(r>4)issues.push('템포('+r+':1) 느림 → 리듬감 있게');else goods.push('스윙 템포('+r+':1) 이상적');}
+
+  let report='📊 스윙 분석 완료 — 종합 점수: '+ov+'/100\n\n';
+  if(goods.length)report+='✅ 잘 된 점:\n'+goods.map(g=>'• '+g).join('\n')+'\n\n';
+  if(issues.length)report+='⚠️ 개선 필요:\n'+issues.map(i=>'• '+i).join('\n')+'\n\n';
+  else report+='🎉 모든 지표가 정상 범위입니다!\n\n';
+  report+='아래 버튼으로 개선 방법을 물어보세요 👇';
+
+  showTab('results');
+  setTimeout(()=>{
+    addChatMsg(report,'analysis');
+    const autoCards=[];
+    if(issues.some(i=>i.includes('척추')))autoCards.push('척추 기울기를 개선하는 구체적인 방법은?');
+    if(issues.some(i=>i.includes('X-Factor')))autoCards.push('X-Factor(어깨-힙 차이)를 높이는 드릴은?');
+    if(issues.some(i=>i.includes('무릎')))autoCards.push('올바른 무릎 각도를 유지하는 방법은?');
+    if(issues.some(i=>i.includes('팔')))autoCards.push('임팩트 시 팔 신전 개선 방법은?');
+    if(issues.some(i=>i.includes('템포')))autoCards.push('스윙 템포 3:1 달성 연습 방법은?');
+    if(autoCards.length===0){autoCards.push('더 완성도 높은 스윙을 위한 훈련은?');autoCards.push('현재 점수에서 비거리 늘리는 방법은?');}
+    while(autoCards.length<3)autoCards.push('종합적인 스윙 개선 방법은?');
+    showSuggestionCards(autoCards.slice(0,3));
+    const swingCtx=buildSwingContext();
+    if(swingCtx){
+      const loading=$('chatLoading');if(loading)loading.classList.add('show');
+      fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({message:'위 스윙 분석 결과를 바탕으로 가장 중요한 개선점 한 가지를 구체적인 연습 방법과 함께 알려줘.',ai:activeAI,swingData:swingCtx})
+      }).then(res=>{if(loading)loading.classList.remove('show');if(res.ok)res.json().then(d=>{if(d.reply)addChatMsg(d.reply,'bot');});}).catch(()=>{if(loading)loading.classList.remove('show');});
+    }
+  },400);
 }
+
+function sendHint(txt){$('chatInput').value=txt;sendChat();}
+
 
 
 // ── TOAST ──
