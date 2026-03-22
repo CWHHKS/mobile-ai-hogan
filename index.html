@@ -1013,7 +1013,8 @@ function buildSwingContext() {
 }
 
 // ── Gemini 직접 호출 fallback ──
-const GEMINI_EP='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_EP='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent';
+
 const SYS_PROMPT='당신은 전문적인 AI 골프 코치입니다. 골프 스윙, 자세, 그립, 스탠스, 백스윙, 다운스윙, 임팩트, 팔로우스루, 코스 전략, 멘탈 관리 등 골프에 관한 모든 질문에 전문적으로 답변합니다. AI 수치 기준: 척추 5-10°, X-Factor 40-55°, 무릎 140-165°, 팔꿈치 100-130°, 템포 3:1. 한국어로 400자 내외.';
 async function callGeminiDirect(msg,ctx){
   const k=window._geminiKey||'';if(!k)return null;
@@ -1131,7 +1132,16 @@ function showToast(msg){
   toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
 }
 
+// Gemini 키 자동 로드 — 앱 시작 시 서버에서 키를 받아 직접 fallback에 사용
+(async function loadGeminiKey(){
+  try{
+    const r=await fetch('/api/gemini-key');
+    if(r.ok){const d=await r.json();if(d.key){window._geminiKey=d.key;console.log('[gemini] 키 로드 완료');}}
+  }catch(e){console.warn('[gemini] 키 로드 실패:',e.message);}
+})();
+
 init();
+
 </script>
 </body>
 </html>
