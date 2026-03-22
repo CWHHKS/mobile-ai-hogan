@@ -39,8 +39,8 @@ module.exports = async function handler(req, res) {
         return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
       }
 
-      // gemini-2.0-flash — 이 API 키에서 사용 가능한 모델 (검증됨)
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+      // gemini-2.0-flash-lite — 별도 무료 quota 풀 사용
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
       console.log('[chat] calling gemini-2.0-flash via v1beta');
 
       const response = await fetch(url, {
