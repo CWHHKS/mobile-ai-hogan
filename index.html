@@ -233,43 +233,52 @@ html,body{height:100%;overflow:hidden;background:var(--g);color:var(--tp);font-f
 .loader strong{color:var(--ga)}
 /* ── HOGAN LESSON PAGE ── */
 .hogan-page{padding:1.2rem;display:flex;flex-direction:column;gap:.9rem}
-.hogan-header{background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(34,197,94,.08));border:1px solid rgba(245,158,11,.3);border-radius:18px;padding:1.4rem;text-align:center}
+.hogan-header{background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(34,197,94,.08));border:1px solid rgba(245,158,11,.35);border-radius:18px;padding:1.4rem;text-align:center;position:relative;overflow:hidden}
+.hogan-header::before{content:'🏆';position:absolute;right:1rem;top:50%;transform:translateY(-50%);font-size:4rem;opacity:.08;pointer-events:none}
 .hogan-header .h-badge{display:inline-block;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:var(--gold);font-size:.7rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:.3rem .8rem;border-radius:100px;margin-bottom:.7rem}
 .hogan-header h2{font-size:1.3rem;font-weight:800;margin-bottom:.4rem;color:var(--tp)}
 .hogan-header p{font-size:.8rem;color:var(--ts);line-height:1.6}
-.lesson-card{background:var(--bg);border:1px solid var(--bd);border-radius:16px;padding:1.1rem;cursor:pointer;transition:all .2s}
-.lesson-card:active{background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.4)}
+.lesson-card{background:var(--bg);border:1px solid var(--bd);border-radius:16px;padding:1.1rem;cursor:pointer;transition:all .25s;position:relative}
+.lesson-card:hover{border-color:rgba(245,158,11,.35);box-shadow:0 4px 20px rgba(245,158,11,.08)}
+.lesson-card:active{background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.5);transform:scale(.99)}
+.lesson-card.expanded{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.04)}
 .lesson-card-top{display:flex;align-items:center;gap:.8rem;margin-bottom:.6rem}
-.lesson-num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#e07b00);color:#000;font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.lesson-title{font-size:.95rem;font-weight:700;color:var(--tp)}
+.lesson-num{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#d97706);color:#000;font-weight:800;font-size:.95rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 12px rgba(245,158,11,.3)}
+.lesson-title{font-size:.95rem;font-weight:700;color:var(--tp);flex:1}
 .lesson-sub{font-size:.75rem;color:var(--gold);font-weight:600}
-.lesson-body{font-size:.8rem;color:var(--ts);line-height:1.6;display:none}
-.lesson-body.open{display:block}
-.lesson-tip{background:rgba(245,158,11,.08);border-left:3px solid var(--gold);padding:.6rem .8rem;border-radius:0 8px 8px 0;margin-top:.7rem;font-size:.78rem;color:var(--gl);line-height:1.5}
+.lesson-toggle-icon{font-size:.75rem;color:var(--gold);opacity:.7;transition:transform .25s;flex-shrink:0}
+.lesson-card.expanded .lesson-toggle-icon{transform:rotate(90deg)}
+.lesson-body{font-size:.8rem;color:var(--ts);line-height:1.65;display:none;padding-top:.3rem}
+.lesson-body.open{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.lesson-tip{background:rgba(245,158,11,.08);border-left:3px solid var(--gold);padding:.65rem .9rem;border-radius:0 8px 8px 0;margin-top:.8rem;font-size:.78rem;color:var(--gl);line-height:1.55}
+.lesson-keywords{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.6rem}
+.lk{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:var(--gold);font-size:.65rem;font-weight:600;padding:.1rem .45rem;border-radius:5px}
 /* ── HOGAN Q&A CHAT ── */
 .chat-wrap{display:flex;flex-direction:column;gap:.6rem}
-.chat-msgs{height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:.5rem;padding:.5rem;background:rgba(0,0,0,.2);border-radius:10px;border:1px solid var(--bd)}
-.chat-msg{max-width:88%;padding:.55rem .8rem;border-radius:12px;font-size:.8rem;line-height:1.5}
-.chat-msg.bot{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);color:var(--tp);align-self:flex-start;border-radius:4px 12px 12px 12px}
-.chat-msg.user{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.25);color:var(--tp);align-self:flex-end;border-radius:12px 4px 12px 12px}
+.chat-msgs{height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:.5rem;padding:.6rem;background:rgba(0,0,0,.25);border-radius:12px;border:1px solid var(--bd);scroll-behavior:smooth}
+.chat-msgs::-webkit-scrollbar{width:3px}.chat-msgs::-webkit-scrollbar-track{background:transparent}.chat-msgs::-webkit-scrollbar-thumb{background:rgba(245,158,11,.3);border-radius:3px}
+.chat-msg{max-width:88%;padding:.6rem .9rem;border-radius:12px;font-size:.8rem;line-height:1.55}
+.chat-msg.bot{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.22);color:var(--tp);align-self:flex-start;border-radius:4px 14px 14px 14px;animation:fadeIn .2s ease}
+.chat-msg.user{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.22);color:var(--tp);align-self:flex-end;border-radius:14px 4px 14px 14px;animation:fadeIn .2s ease}
 .chat-input-row{display:flex;gap:.5rem}
-.chat-input{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--bd);border-radius:10px;padding:.55rem .8rem;color:var(--tp);font-family:'Inter',sans-serif;font-size:.85rem;outline:none}
-.chat-input:focus{border-color:var(--gold)}
-.chat-send{background:var(--gold);color:#000;border:none;border-radius:10px;padding:.55rem .9rem;font-weight:700;font-size:.85rem;cursor:pointer;white-space:nowrap}
-.chat-send:active{opacity:.8}
-.chat-hints{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.3rem}
-.hint-chip{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--gold);font-size:.7rem;font-weight:600;padding:.2rem .6rem;border-radius:20px;cursor:pointer}
-.hint-chip:active{background:rgba(245,158,11,.2)}
+.chat-input{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--bd);border-radius:12px;padding:.6rem .9rem;color:var(--tp);font-family:'Inter',sans-serif;font-size:.85rem;outline:none;transition:border-color .2s}
+.chat-input:focus{border-color:rgba(245,158,11,.6);box-shadow:0 0 0 2px rgba(245,158,11,.08)}
+.chat-send{background:linear-gradient(135deg,var(--gold),#d97706);color:#000;border:none;border-radius:12px;padding:.6rem 1rem;font-weight:700;font-size:.9rem;cursor:pointer;white-space:nowrap;transition:all .15s;box-shadow:0 2px 8px rgba(245,158,11,.3)}
+.chat-send:active{opacity:.8;transform:scale(.97)}
+.chat-hints{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.2rem}
+.hint-chip{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--gold);font-size:.7rem;font-weight:600;padding:.25rem .65rem;border-radius:20px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.hint-chip:active{background:rgba(245,158,11,.25);transform:scale(.96)}
 /* AI Toggle */
-.ai-toggle{display:flex;gap:.4rem;margin-bottom:.5rem}
-.ai-btn{flex:1;padding:.45rem .6rem;border-radius:9px;border:1px solid var(--bd);background:var(--bg);color:rgba(134,239,172,.5);font-size:.78rem;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.3rem}
-.ai-btn.active-gemini{background:rgba(26,115,232,.15);border-color:rgba(26,115,232,.5);color:#60a5fa}
-.ai-btn.active-openai{background:rgba(16,163,127,.15);border-color:rgba(16,163,127,.5);color:#34d399}
+.ai-toggle{display:flex;gap:.5rem;margin-bottom:.4rem}
+.ai-btn{flex:1;padding:.5rem .6rem;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:rgba(134,239,172,.45);font-size:.8rem;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.35rem}
+.ai-btn.active-gemini{background:rgba(26,115,232,.18);border-color:rgba(26,115,232,.55);color:#60a5fa;box-shadow:0 0 12px rgba(26,115,232,.15)}
+.ai-btn.active-openai{background:rgba(16,163,127,.18);border-color:rgba(16,163,127,.55);color:#34d399;box-shadow:0 0 12px rgba(16,163,127,.15)}
 .ai-btn:active{transform:scale(.97)}
-.chat-loading{display:none;align-items:center;gap:.4rem;padding:.5rem .8rem;font-size:.78rem;color:var(--ts)}
+.chat-loading{display:none;align-items:center;gap:.5rem;padding:.5rem .8rem;font-size:.78rem;color:var(--ts)}
 .chat-loading.show{display:flex}
-.dot-ani{display:flex;gap:3px}
-.dot-ani span{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:dotpulse 1.2s infinite}
+.dot-ani{display:flex;gap:4px}
+.dot-ani span{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:dotpulse 1.2s infinite}
 .dot-ani span:nth-child(2){animation-delay:.2s}
 .dot-ani span:nth-child(3){animation-delay:.4s}
 @keyframes dotpulse{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
@@ -479,7 +488,7 @@ html,body{height:100%;overflow:hidden;background:var(--g);color:var(--tp);font-f
             </div>
             <div class="chat-input-row">
               <input class="chat-input" id="chatInput" type="text" placeholder="호건 선생님께 질문..." onkeydown="if(event.key==='Enter')sendChat()"/>
-              <button class="chat-send" onclick="sendChat()">전송</button>
+              <button class="chat-send" onclick="sendChat()">✈️ 전송</button>
             </div>
           </div>
         </div>
@@ -495,8 +504,11 @@ html,body{height:100%;overflow:hidden;background:var(--g);color:var(--tp);font-f
           <p>"골프는 연습으로 완성되지 않는다.<br/>올바른 연습으로만 완성된다." — 벤 호건</p>
         </div>
         <div class="lesson-card" onclick="toggleLesson(this)">
-          <div class="lesson-card-top"><div class="lesson-num">1</div><div><div class="lesson-title">그립 (The Grip)</div><div class="lesson-sub">가장 중요한 첫 번째 원칙</div></div></div>
-          <div class="lesson-body">호건은 그립을 골프의 가장 근본적인 요소로 봤습니다. <strong>배돈(Vardon) 그립</strong>을 권장했으며, 왼손은 페이드를 위해 약간 열리게, 손가락 패드로 클럽을 잡아야 한다고 강조했습니다.<div class="lesson-tip">💡 호건 팁: 왼손 엄지와 검지로 만든 V자가 오른쪽 어깨를 향하도록 하라.</div></div>
+          <div class="lesson-card-top"><div class="lesson-num">1</div><div style="flex:1"><div class="lesson-title">그립 (The Grip)</div><div class="lesson-sub">골프의 가장 근본적인 첫 번째 원칙</div></div><span class="lesson-toggle-icon">▶</span></div>
+          <div class="lesson-body">호건은 그립을 골프의 가장 근본적인 요소로 봤습니다. <strong>배돈(Vardon) 오버래핑 그립</strong>을 권장했으며, 왼손 마지막 세 손가락에 압력 집중, 오른손은 핑거 그립 사용.
+            <div class="lesson-tip">💡 호건 팁: 왼손 V자가 오른쪽 눈을 향하도록 하라.<br/>"그립이 잘못되면 아무것도 제대로 될 수 없다."</div>
+            <div class="lesson-keywords"><span class="lk">왼손 그립</span><span class="lk">오른손 그립</span><span class="lk">V자 방향</span><span class="lk">오버래핑</span></div>
+          </div>
         </div>
         <div class="lesson-card" onclick="toggleLesson(this)">
           <div class="lesson-card-top"><div class="lesson-num">2</div><div><div class="lesson-title">스탠스 & 정렬</div><div class="lesson-sub">발, 엉덩이, 어깨 모두 타겟 라인과 평행</div></div></div>
@@ -549,7 +561,7 @@ html,body{height:100%;overflow:hidden;background:var(--g);color:var(--tp);font-f
 <script>
 const $ = id => document.getElementById(id);
 const SKEL=[[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
-let detector=null, liveRunning=false, videoRunning=false, rafId=null;
+let detector=null, liveRunning=false, videoRunning=false, liveRafId=null, videoRafId=null;
 let camStream=null, facingMode='environment';
 let sh={spine:[],xf:[],knee:[],elbow:[],rknee:[],lelbow:[],head:[],footW:[],wCenter:[],kneeSym:[],neckTilt:[]};
 const HL=20;
@@ -587,7 +599,7 @@ function showTab(name){
   $('page-'+name).classList.add('active');
   $('tab-'+name).classList.add('active');
   if(name==='camera') startCamera();
-  else stopCamera();
+  else stopLiveOnly();
 }
 function goCamera(){showTab('camera');}
 function goUpload(){showTab('upload');}
@@ -611,8 +623,8 @@ async function startCamera(){
     else showToast('⚠️ 카메라 오류: HTTPS 접속이 필요합니다 (ngrok 사용)');
   }
 }
-function stopCamera(){
-  liveRunning=false; cancelAnimationFrame(rafId);
+function stopLiveOnly(){
+  liveRunning=false; cancelAnimationFrame(liveRafId); liveRafId=null;
   if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}
   $('camFeed').srcObject=null;
   $('liveBtn').textContent='▶';
@@ -620,14 +632,17 @@ function stopCamera(){
   $('camBadge').textContent='⏸ 대기 중';
   setStatus('ready','준비 완료');
 }
+function stopCamera(){
+  stopLiveOnly();
+}
 async function flipCamera(){
   facingMode=facingMode==='environment'?'user':'environment';
-  stopCamera(); await startCamera();
+  stopLiveOnly(); await startCamera();
 }
 function toggleLive(){
   if(!detector){showToast('⏳ AI 모델 로딩 중...');return;}
   if(liveRunning){
-    liveRunning=false; cancelAnimationFrame(rafId);
+    liveRunning=false; cancelAnimationFrame(liveRafId); liveRafId=null;
     $('liveBtn').textContent='▶'; $('liveBtn').classList.remove('recording');
     $('camBadge').textContent='⏸ 대기 중';
     setStatus('ready','준비 완료');
@@ -658,7 +673,7 @@ async function liveLoop(){
       }
     }catch(e){}
   }
-  rafId=requestAnimationFrame(liveLoop);
+  liveRafId=requestAnimationFrame(liveLoop);
 }
 
 // ── VIDEO UPLOAD ──
@@ -678,7 +693,7 @@ function loadVideo(file){
   showToast('✅ 영상 로드 완료!');
 }
 function resetUpload(){
-  videoRunning=false; cancelAnimationFrame(rafId);
+  videoRunning=false; cancelAnimationFrame(videoRafId); videoRafId=null;
   $('videoEl').pause(); $('videoEl').src='';
   $('upload-zone').style.display='block';
   $('video-analysis-area').style.display='none';
@@ -692,7 +707,7 @@ function startVideoAnalysis(){
   $('videoEl').play(); videoLoop();
 }
 function stopVideoAnalysis(){
-  videoRunning=false; cancelAnimationFrame(rafId);
+  videoRunning=false; cancelAnimationFrame(videoRafId); videoRafId=null;
   $('videoEl').pause(); $('analyzeBtn').disabled=false; $('stopVidBtn').disabled=true;
   setStatus('ready','준비 완료');
 }
@@ -709,7 +724,7 @@ async function videoLoop(){
       addH(s); updateUI(m,s);
     }
   }catch(e){console.error('videoLoop:',e);}
-  rafId=requestAnimationFrame(videoLoop);
+  videoRafId=requestAnimationFrame(videoLoop);
 }
 
 // ── POSE MATH ──
@@ -928,9 +943,21 @@ function safeSetBar(bid,nid,val){const b=$(bid),n=$(nid);if(b)b.style.width=val+
 
 // ── HOGAN LESSON TOGGLE ──
 function toggleLesson(card){
-  const body=card.querySelector('.lesson-body');
-  body.classList.toggle('open');
+  const body = card.querySelector('.lesson-body');
+  const icon = card.querySelector('.lesson-toggle-icon');
+  const isOpen = body.classList.contains('open');
+  // 다른 카드 모두 닫기 (아코디언)
+  document.querySelectorAll('.lesson-card').forEach(c => {
+    c.querySelector('.lesson-body').classList.remove('open');
+    c.classList.remove('expanded');
+  });
+  // 클릭한 카드 토글
+  if (!isOpen) {
+    body.classList.add('open');
+    card.classList.add('expanded');
+  }
 }
+
 
 // ── HOGAN Q&A CHAT ENGINE ──
 const HOGAN_KB = [
